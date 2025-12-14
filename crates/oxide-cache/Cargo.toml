@@ -1,0 +1,13 @@
+[package]
+name = "oxide-cache"
+version.workspace = true
+edition = "2024"
+description = "Distributed cache for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+aws-sdk-s3 = "1"
+sha2 = { workspace = true }

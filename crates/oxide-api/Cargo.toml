@@ -1,0 +1,25 @@
+[package]
+name = "oxide-api"
+version.workspace = true
+edition = "2024"
+description = "HTTP/WebSocket API server for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+oxide-db = { workspace = true }
+oxide-nats = { workspace = true }
+oxide-licensing = { workspace = true }
+oxide-auth = { workspace = true }
+oxide-trace = { workspace = true }
+
+axum = { workspace = true }
+axum-extra = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+tokio-tungstenite = "0.26"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }

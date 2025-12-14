@@ -1,0 +1,13 @@
+[package]
+name = "oxide-plugins"
+version.workspace = true
+edition = "2024"
+description = "WASM plugin host for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+extism = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+dashmap = "6"

@@ -1,0 +1,18 @@
+[package]
+name = "oxide-runner"
+version.workspace = true
+edition = "2024"
+description = "Step execution engine for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+oxide-plugins = { workspace = true }
+oxide-cache = { workspace = true }
+oxide-secrets = { workspace = true }
+oxide-trace = { workspace = true }
+
+tokio = { workspace = true, features = ["process"] }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+bollard = "0.18"
+async-stream = "0.3"

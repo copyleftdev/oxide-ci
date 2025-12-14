@@ -1,0 +1,15 @@
+[package]
+name = "oxide-trace"
+version.workspace = true
+edition = "2024"
+description = "OpenTelemetry integration for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+tracing-opentelemetry = "0.28"

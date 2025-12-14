@@ -1,0 +1,15 @@
+[package]
+name = "oxide-secrets"
+version.workspace = true
+edition = "2024"
+description = "Multi-provider secret management for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+aws-sdk-secretsmanager = "1"
+aws-sdk-ssm = "1"
+aes-gcm = "0.10"

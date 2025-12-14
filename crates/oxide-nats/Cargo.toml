@@ -1,0 +1,15 @@
+[package]
+name = "oxide-nats"
+version.workspace = true
+edition = "2024"
+description = "NATS event bus implementation for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+async-nats = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }

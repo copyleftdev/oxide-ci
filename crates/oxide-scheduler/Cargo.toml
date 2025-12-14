@@ -1,0 +1,17 @@
+[package]
+name = "oxide-scheduler"
+version.workspace = true
+edition = "2024"
+description = "Pipeline scheduling and orchestration for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+oxide-nats = { workspace = true }
+oxide-db = { workspace = true }
+oxide-licensing = { workspace = true }
+
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+petgraph = "0.7"
+cron = "0.15"

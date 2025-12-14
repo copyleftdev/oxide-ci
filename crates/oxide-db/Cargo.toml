@@ -1,0 +1,15 @@
+[package]
+name = "oxide-db"
+version.workspace = true
+edition = "2024"
+description = "PostgreSQL database layer for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }

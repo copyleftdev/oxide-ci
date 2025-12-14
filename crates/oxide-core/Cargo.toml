@@ -1,0 +1,13 @@
+[package]
+name = "oxide-core"
+version.workspace = true
+edition = "2024"
+description = "Core domain types and traits for Oxide CI"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }

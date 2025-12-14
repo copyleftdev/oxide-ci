@@ -1,0 +1,105 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/oxide-core",
+    "crates/oxide-api",
+    "crates/oxide-scheduler",
+    "crates/oxide-agent",
+    "crates/oxide-runner",
+    "crates/oxide-plugins",
+    "crates/oxide-nats",
+    "crates/oxide-db",
+    "crates/oxide-cache",
+    "crates/oxide-secrets",
+    "crates/oxide-auth",
+    "crates/oxide-licensing",
+    "crates/oxide-billing",
+    "crates/oxide-notify",
+    "crates/oxide-trace",
+    "crates/oxide-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Oxide CI <hello@oxideci.io>"]
+license = "Proprietary"
+repository = "https://github.com/copyleftdev/oxide-ci"
+
+[workspace.dependencies]
+# Internal crates
+oxide-core = { path = "crates/oxide-core" }
+oxide-api = { path = "crates/oxide-api" }
+oxide-scheduler = { path = "crates/oxide-scheduler" }
+oxide-agent = { path = "crates/oxide-agent" }
+oxide-runner = { path = "crates/oxide-runner" }
+oxide-plugins = { path = "crates/oxide-plugins" }
+oxide-nats = { path = "crates/oxide-nats" }
+oxide-db = { path = "crates/oxide-db" }
+oxide-cache = { path = "crates/oxide-cache" }
+oxide-secrets = { path = "crates/oxide-secrets" }
+oxide-auth = { path = "crates/oxide-auth" }
+oxide-licensing = { path = "crates/oxide-licensing" }
+oxide-billing = { path = "crates/oxide-billing" }
+oxide-notify = { path = "crates/oxide-notify" }
+oxide-trace = { path = "crates/oxide-trace" }
+oxide-cli = { path = "crates/oxide-cli" }
+
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# Web framework
+axum = "0.8"
+axum-extra = { version = "0.10", features = ["typed-header"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
+
+# Messaging
+async-nats = "0.38"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# WASM plugins
+extism = "1"
+
+# Tracing/Telemetry
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+opentelemetry = "0.27"
+opentelemetry-otlp = "0.27"
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Utilities
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
+config = "0.14"
+dotenvy = "0.15"
+url = "2"
+base64 = "0.22"
+sha2 = "0.10"
+
+# Testing
+tokio-test = "0.4"
+wiremock = "0.6"
+testcontainers = "0.23"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

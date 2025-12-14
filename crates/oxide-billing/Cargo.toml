@@ -1,0 +1,12 @@
+[package]
+name = "oxide-billing"
+version.workspace = true
+edition = "2024"
+description = "Stripe billing integration for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+stripe-rust = "26"

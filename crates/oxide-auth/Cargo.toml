@@ -1,0 +1,13 @@
+[package]
+name = "oxide-auth"
+version.workspace = true
+edition = "2024"
+description = "OIDC token exchange for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+jsonwebtoken = "9"

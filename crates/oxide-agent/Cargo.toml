@@ -1,0 +1,19 @@
+[package]
+name = "oxide-agent"
+version.workspace = true
+edition = "2024"
+description = "Build agent for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+oxide-runner = { workspace = true }
+oxide-nats = { workspace = true }
+oxide-plugins = { workspace = true }
+oxide-cache = { workspace = true }
+oxide-secrets = { workspace = true }
+oxide-trace = { workspace = true }
+
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+sysinfo = "0.33"

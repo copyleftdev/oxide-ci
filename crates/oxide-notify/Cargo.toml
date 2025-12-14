@@ -1,0 +1,12 @@
+[package]
+name = "oxide-notify"
+version.workspace = true
+edition = "2024"
+description = "Notification channels for Oxide CI"
+
+[dependencies]
+oxide-core = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
