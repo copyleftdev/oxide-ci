@@ -1,0 +1,22 @@
+[package]
+name = "oxide-spec"
+version.workspace = true
+edition = "2024"
+description = "Spec-code correlation and validation for Oxide CI"
+build = "build.rs"
+
+[dependencies]
+oxide-core = { workspace = true }
+schemars = "0.8"
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+
+[build-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"
+
+[dev-dependencies]
+pretty_assertions = "1"

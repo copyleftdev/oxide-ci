@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/oxide-core",
+    "crates/oxide-spec",
     "crates/oxide-api",
     "crates/oxide-scheduler",
     "crates/oxide-agent",
@@ -44,6 +45,10 @@ oxide-billing = { path = "crates/oxide-billing" }
 oxide-notify = { path = "crates/oxide-notify" }
 oxide-trace = { path = "crates/oxide-trace" }
 oxide-cli = { path = "crates/oxide-cli" }
+oxide-spec = { path = "crates/oxide-spec" }
+
+# Schema generation
+schemars = "0.8"
 
 # Async runtime
 tokio = { version = "1.42", features = ["full"] }
