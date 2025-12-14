@@ -1,0 +1,211 @@
+# Billing Schemas (Stripe Integration)
+# https://stripe.com/docs/api
+
+Subscription:
+  type: object
+  required:
+    - id
+    - customer_id
+    - status
+    - plan
+  properties:
+    id:
+      type: string
+      description: Stripe subscription ID (sub_xxx)
+    customer_id:
+      type: string
+      description: Stripe customer ID (cus_xxx)
+    status:
+      type: string
+      enum:
+        - active
+        - past_due
+        - unpaid
+        - canceled
+        - incomplete
+        - incomplete_expired
+        - trialing
+        - paused
+    plan:
+      $ref: '#/Plan'
+    quantity:
+      type: integer
+      description: Number of seats/agents
+    current_period_start:
+      $ref: './common.yaml#/Timestamp'
+    current_period_end:
+      $ref: './common.yaml#/Timestamp'
+    cancel_at_period_end:
+      type: boolean
+    trial_end:
+      $ref: './common.yaml#/Timestamp'
+
+Plan:
+  type: object
+  required:
+    - id
+    - name
+    - amount
+    - currency
+    - interval
+  properties:
+    id:
+      type: string
+      description: Stripe price ID (price_xxx)
+    name:
+      type: string
+      enum:
+        - Starter
+        - Professional
+        - Enterprise
+    amount:
+      type: integer
+      description: Amount in cents
+    currency:
+      type: string
+      examples:
+        - "usd"
+    interval:
+      type: string
+      enum:
+        - month
+        - year
+    metered:
+      type: boolean
+      description: If true, usage-based billing
+
+SubscriptionPayload:
+  type: object
+  required:
+    - subscription_id
+    - customer_id
+    - status
+    - timestamp
+  properties:
+    subscription_id:
+      type: string
+    customer_id:
+      type: string
+    status:
+      type: string
+    plan_id:
+      type: string
+    plan_name:
+      type: string
+    quantity:
+      type: integer
+    mrr_cents:
+      type: integer
+      description: Monthly recurring revenue in cents
+    keygen_license_id:
+      type: string
+      description: Linked Keygen license ID
+    timestamp:
+      $ref: './common.yaml#/Timestamp'
+
+SubscriptionCancelledPayload:
+  type: object
+  required:
+    - subscription_id
+    - customer_id
+    - cancelled_at
+  properties:
+    subscription_id:
+      type: string
+    customer_id:
+      type: string
+    reason:
+      type: string
+      enum:
+        - customer_request
+        - payment_failure
+        - fraud
+        - other
+    feedback:
+      type: string
+      description: Cancellation feedback from customer
+    keygen_license_id:
+      type: string
+    cancelled_at:
+      $ref: './common.yaml#/Timestamp'
+    effective_at:
+      $ref: './common.yaml#/Timestamp'
+      description: When subscription actually ends
+
+PaymentPayload:
+  type: object
+  required:
+    - payment_intent_id
+    - customer_id
+    - amount
+    - currency
+    - status
+  properties:
+    payment_intent_id:
+      type: string
+      description: Stripe PaymentIntent ID (pi_xxx)
+    invoice_id:
+      type: string
+      description: Stripe Invoice ID (in_xxx)
+    customer_id:
+      type: string
+    subscription_id:
+      type: string
+    amount:
+      type: integer
+      description: Amount in cents
+    currency:
+      type: string
+    status:
+      type: string
+      enum:
+        - succeeded
+        - processing
+    payment_method:
+      type: string
+      enum:
+        - card
+        - bank_transfer
+        - other
+    receipt_url:
+      type: string
+      format: uri
+    paid_at:
+      $ref: './common.yaml#/Timestamp'
+
+PaymentFailedPayload:
+  type: object
+  required:
+    - payment_intent_id
+    - customer_id
+    - amount
+    - failure_code
+    - failed_at
+  properties:
+    payment_intent_id:
+      type: string
+    invoice_id:
+      type: string
+    customer_id:
+      type: string
+    subscription_id:
+      type: string
+    amount:
+      type: integer
+    currency:
+      type: string
+    failure_code:
+      type: string
+      examples:
+        - "card_declined"
+        - "insufficient_funds"
+        - "expired_card"
+    failure_message:
+      type: string
+    next_retry_at:
+      $ref: './common.yaml#/Timestamp'
+    keygen_license_id:
+      type: string
+      description: License to suspend if retries exhausted
+    failed_at:
+      $ref: './common.yaml#/Timestamp'

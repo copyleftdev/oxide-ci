@@ -1,0 +1,51 @@
+# Billing Channels (Stripe Integration)
+
+subscription-created:
+  address: billing.subscription.created.{customer_id}
+  description: Emitted when a new subscription is created
+  parameters:
+    customer_id:
+      description: The Stripe customer identifier
+  messages:
+    subscriptionCreated:
+      $ref: '../messages/billing.yaml#/SubscriptionCreated'
+
+subscription-updated:
+  address: billing.subscription.updated.{customer_id}
+  description: Emitted when a subscription is updated (plan change, quantity)
+  parameters:
+    customer_id:
+      description: The Stripe customer identifier
+  messages:
+    subscriptionUpdated:
+      $ref: '../messages/billing.yaml#/SubscriptionUpdated'
+
+subscription-cancelled:
+  address: billing.subscription.cancelled.{customer_id}
+  description: Emitted when a subscription is cancelled
+  parameters:
+    customer_id:
+      description: The Stripe customer identifier
+  messages:
+    subscriptionCancelled:
+      $ref: '../messages/billing.yaml#/SubscriptionCancelled'
+
+payment-succeeded:
+  address: billing.payment.succeeded.{customer_id}
+  description: Emitted when a payment succeeds
+  parameters:
+    customer_id:
+      description: The Stripe customer identifier
+  messages:
+    paymentSucceeded:
+      $ref: '../messages/billing.yaml#/PaymentSucceeded'
+
+payment-failed:
+  address: billing.payment.failed.{customer_id}
+  description: Emitted when a payment fails
+  parameters:
+    customer_id:
+      description: The Stripe customer identifier
+  messages:
+    paymentFailed:
+      $ref: '../messages/billing.yaml#/PaymentFailed'

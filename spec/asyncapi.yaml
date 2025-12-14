@@ -1,0 +1,221 @@
+asyncapi: 3.0.0
+
+info:
+  title: Oxide CI
+  version: 0.1.0
+  description: |
+    API-first CI/CD engine written in Rust.
+    
+    ## Licensing
+    This product uses Keygen for license management and Stripe for payments.
+    All API access requires a valid license key.
+  license:
+    name: Proprietary
+    url: https://oxideci.io/license
+  contact:
+    name: Oxide CI
+    url: https://oxideci.io
+  tags:
+    - name: runs
+      description: Pipeline run lifecycle events
+    - name: agents
+      description: Agent pool management
+    - name: licensing
+      description: Keygen license validation events
+    - name: billing
+      description: Stripe billing events
+
+servers:
+  production:
+    host: api.oxideci.io
+    protocol: wss
+    description: Production WebSocket API
+  production-nats:
+    host: nats.oxideci.io:4222
+    protocol: nats
+    description: Internal NATS message bus
+
+defaultContentType: application/json
+
+channels:
+  # Run Lifecycle
+  run-queued:
+    address: run.queued.{pipeline_id}
+    description: Emitted when a run is queued
+    parameters:
+      pipeline_id:
+        description: Pipeline identifier
+    messages:
+      runQueued:
+        $ref: './messages/run.yaml#/RunQueued'
+  
+  run-started:
+    address: run.started.{pipeline_id}.{run_id}
+    description: Emitted when a run begins
+    parameters:
+      pipeline_id:
+        description: Pipeline identifier
+      run_id:
+        description: Run identifier
+    messages:
+      runStarted:
+        $ref: './messages/run.yaml#/RunStarted'
+  
+  run-completed:
+    address: run.completed.{pipeline_id}.{run_id}
+    description: Emitted when a run finishes
+    parameters:
+      pipeline_id:
+        description: Pipeline identifier
+      run_id:
+        description: Run identifier
+    messages:
+      runCompleted:
+        $ref: './messages/run.yaml#/RunCompleted'
+
+  # Step Events
+  step-output:
+    address: run.{run_id}.step.{step_id}.output
+    description: Real-time log streaming
+    parameters:
+      run_id:
+        description: Run identifier
+      step_id:
+        description: Step identifier
+    messages:
+      stepOutput:
+        $ref: './messages/step.yaml#/StepOutput'
+
+  # Agent Pool
+  agent-registered:
+    address: agent.registered
+    description: Agent joined the pool
+    messages:
+      agentRegistered:
+        $ref: './messages/agent.yaml#/AgentRegistered'
+
+  agent-heartbeat:
+    address: agent.{agent_id}.heartbeat
+    description: Agent health check
+    parameters:
+      agent_id:
+        description: Agent identifier
+    messages:
+      agentHeartbeat:
+        $ref: './messages/agent.yaml#/AgentHeartbeat'
+
+  # Licensing (Keygen)
+  license-validated:
+    address: license.validated.{license_id}
+    description: License validated successfully
+    parameters:
+      license_id:
+        description: Keygen license ID
+    messages:
+      licenseValidated:
+        $ref: './messages/licensing.yaml#/LicenseValidated'
+
+  license-suspended:
+    address: license.suspended.{license_id}
+    description: License suspended
+    parameters:
+      license_id:
+        description: Keygen license ID
+    messages:
+      licenseSuspended:
+        $ref: './messages/licensing.yaml#/LicenseSuspended'
+
+  # Billing (Stripe)
+  subscription-created:
+    address: billing.subscription.created.{customer_id}
+    description: New subscription created
+    parameters:
+      customer_id:
+        description: Stripe customer ID
+    messages:
+      subscriptionCreated:
+        $ref: './messages/billing.yaml#/SubscriptionCreated'
+
+  payment-failed:
+    address: billing.payment.failed.{customer_id}
+    description: Payment failed
+    parameters:
+      customer_id:
+        description: Stripe customer ID
+    messages:
+      paymentFailed:
+        $ref: './messages/billing.yaml#/PaymentFailed'
+
+operations:
+  onRunQueued:
+    action: receive
+    channel:
+      $ref: '#/channels/run-queued'
+    summary: Receive run queued notification
+
+  onRunStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/run-started'
+    summary: Receive run started notification
+
+  onRunCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/run-completed'
+    summary: Receive run completed notification
+
+  onStepOutput:
+    action: receive
+    channel:
+      $ref: '#/channels/step-output'
+    summary: Stream real-time logs
+
+  onAgentRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/agent-registered'
+    summary: Agent joined notification
+
+  onAgentHeartbeat:
+    action: receive
+    channel:
+      $ref: '#/channels/agent-heartbeat'
+    summary: Monitor agent health
+
+  onLicenseValidated:
+    action: receive
+    channel:
+      $ref: '#/channels/license-validated'
+    summary: License validation confirmed
+
+  onLicenseSuspended:
+    action: receive
+    channel:
+      $ref: '#/channels/license-suspended'
+    summary: License suspended notification
+
+  onSubscriptionCreated:
+    action: receive
+    channel:
+      $ref: '#/channels/subscription-created'
+    summary: Subscription created notification
+
+  onPaymentFailed:
+    action: receive
+    channel:
+      $ref: '#/channels/payment-failed'
+    summary: Payment failure notification
+
+components:
+  securitySchemes:
+    licenseKey:
+      type: httpApiKey
+      name: X-License-Key
+      in: header
+      description: Keygen license key for API access
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authenticated requests

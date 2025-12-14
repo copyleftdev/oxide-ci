@@ -1,0 +1,186 @@
+# Cache Schemas
+# Defines caching events and configuration
+
+CacheEntry:
+  type: object
+  required:
+    - id
+    - key
+    - size_bytes
+    - created_at
+  properties:
+    id:
+      $ref: './common.yaml#/Uuid'
+    key:
+      type: string
+      description: Cache key
+      examples:
+        - "npm-linux-x64-abc123def456"
+    version:
+      type: string
+      description: Cache version for invalidation
+    size_bytes:
+      type: integer
+    compression:
+      type: string
+      enum:
+        - gzip
+        - zstd
+        - lz4
+        - none
+      default: zstd
+    checksum_sha256:
+      type: string
+    scope:
+      type: string
+      enum:
+        - pipeline
+        - project
+        - organization
+      default: pipeline
+    created_at:
+      $ref: './common.yaml#/Timestamp'
+    expires_at:
+      $ref: './common.yaml#/Timestamp'
+    last_accessed_at:
+      $ref: './common.yaml#/Timestamp'
+    access_count:
+      type: integer
+      default: 0
+
+CacheHitPayload:
+  type: object
+  required:
+    - run_id
+    - cache_key
+    - size_bytes
+    - restored_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    step_id:
+      type: string
+    cache_key:
+      type: string
+    cache_id:
+      $ref: './common.yaml#/Uuid'
+    size_bytes:
+      type: integer
+    restore_duration_ms:
+      type: integer
+    paths:
+      type: array
+      items:
+        type: string
+    restored_at:
+      $ref: './common.yaml#/Timestamp'
+
+CacheMissPayload:
+  type: object
+  required:
+    - run_id
+    - cache_key
+    - missed_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    step_id:
+      type: string
+    cache_key:
+      type: string
+    restore_keys_tried:
+      type: array
+      items:
+        type: string
+      description: Fallback keys that were attempted
+    will_populate:
+      type: boolean
+      default: true
+      description: Whether cache will be populated after step
+    missed_at:
+      $ref: './common.yaml#/Timestamp'
+
+CacheUploadedPayload:
+  type: object
+  required:
+    - run_id
+    - cache_key
+    - cache_id
+    - size_bytes
+    - uploaded_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    step_id:
+      type: string
+    cache_key:
+      type: string
+    cache_id:
+      $ref: './common.yaml#/Uuid'
+    size_bytes:
+      type: integer
+    size_before_compression:
+      type: integer
+    compression_ratio:
+      type: number
+    upload_duration_ms:
+      type: integer
+    paths:
+      type: array
+      items:
+        type: string
+    ttl_seconds:
+      type: integer
+    uploaded_at:
+      $ref: './common.yaml#/Timestamp'
+    expires_at:
+      $ref: './common.yaml#/Timestamp'
+
+CacheEvictedPayload:
+  type: object
+  required:
+    - cache_id
+    - cache_key
+    - reason
+    - evicted_at
+  properties:
+    cache_id:
+      $ref: './common.yaml#/Uuid'
+    cache_key:
+      type: string
+    reason:
+      type: string
+      enum:
+        - expired
+        - capacity
+        - manual
+        - version_change
+    size_bytes:
+      type: integer
+    age_seconds:
+      type: integer
+    evicted_at:
+      $ref: './common.yaml#/Timestamp'
+
+CacheStats:
+  type: object
+  properties:
+    total_entries:
+      type: integer
+    total_size_bytes:
+      type: integer
+    hit_count:
+      type: integer
+    miss_count:
+      type: integer
+    hit_rate:
+      type: number
+      description: Hit rate as decimal (0.0 to 1.0)
+    avg_restore_duration_ms:
+      type: integer
+    avg_upload_duration_ms:
+      type: integer
+    period_start:
+      $ref: './common.yaml#/Timestamp'
+    period_end:
+      $ref: './common.yaml#/Timestamp'

@@ -1,0 +1,181 @@
+# Schema Index
+
+# Common
+Uuid:
+  $ref: './common.yaml#/Uuid'
+Timestamp:
+  $ref: './common.yaml#/Timestamp'
+Status:
+  $ref: './common.yaml#/Status'
+
+# Run
+RunQueuedPayload:
+  $ref: './run.yaml#/RunQueuedPayload'
+RunStartedPayload:
+  $ref: './run.yaml#/RunStartedPayload'
+RunCompletedPayload:
+  $ref: './run.yaml#/RunCompletedPayload'
+RunCancelledPayload:
+  $ref: './run.yaml#/RunCancelledPayload'
+
+# Stage
+StageStartedPayload:
+  $ref: './stage.yaml#/StageStartedPayload'
+StageCompletedPayload:
+  $ref: './stage.yaml#/StageCompletedPayload'
+
+# Step
+StepStartedPayload:
+  $ref: './step.yaml#/StepStartedPayload'
+StepOutputPayload:
+  $ref: './step.yaml#/StepOutputPayload'
+StepCompletedPayload:
+  $ref: './step.yaml#/StepCompletedPayload'
+
+# Agent
+Agent:
+  $ref: './agent.yaml#/Agent'
+AgentHeartbeatPayload:
+  $ref: './agent.yaml#/AgentHeartbeatPayload'
+AgentDisconnectedPayload:
+  $ref: './agent.yaml#/AgentDisconnectedPayload'
+
+# Webhook
+GitHubPushPayload:
+  $ref: './webhook.yaml#/GitHubPushPayload'
+GitHubPullRequestPayload:
+  $ref: './webhook.yaml#/GitHubPullRequestPayload'
+
+# Artifact
+ArtifactUploadedPayload:
+  $ref: './artifact.yaml#/ArtifactUploadedPayload'
+
+# Licensing (Keygen)
+License:
+  $ref: './licensing.yaml#/License'
+LicenseValidatedPayload:
+  $ref: './licensing.yaml#/LicenseValidatedPayload'
+LicenseExpiredPayload:
+  $ref: './licensing.yaml#/LicenseExpiredPayload'
+LicenseSuspendedPayload:
+  $ref: './licensing.yaml#/LicenseSuspendedPayload'
+
+# Billing (Stripe)
+Subscription:
+  $ref: './billing.yaml#/Subscription'
+SubscriptionPayload:
+  $ref: './billing.yaml#/SubscriptionPayload'
+SubscriptionCancelledPayload:
+  $ref: './billing.yaml#/SubscriptionCancelledPayload'
+PaymentPayload:
+  $ref: './billing.yaml#/PaymentPayload'
+PaymentFailedPayload:
+  $ref: './billing.yaml#/PaymentFailedPayload'
+
+# Pipeline Definition
+PipelineDefinition:
+  $ref: './pipeline.yaml#/PipelineDefinition'
+TriggerConfig:
+  $ref: './pipeline.yaml#/TriggerConfig'
+StageDefinition:
+  $ref: './pipeline.yaml#/StageDefinition'
+StepDefinition:
+  $ref: './pipeline.yaml#/StepDefinition'
+RetryConfig:
+  $ref: './pipeline.yaml#/RetryConfig'
+ConcurrencyConfig:
+  $ref: './pipeline.yaml#/ConcurrencyConfig'
+CacheConfig:
+  $ref: './pipeline.yaml#/CacheConfig'
+MatrixConfig:
+  $ref: './pipeline.yaml#/MatrixConfig'
+
+# Environment
+ExecutionEnvironment:
+  $ref: './environment.yaml#/ExecutionEnvironment'
+ContainerConfig:
+  $ref: './environment.yaml#/ContainerConfig'
+FirecrackerConfig:
+  $ref: './environment.yaml#/FirecrackerConfig'
+NixConfig:
+  $ref: './environment.yaml#/NixConfig'
+ResourceLimits:
+  $ref: './environment.yaml#/ResourceLimits'
+
+# Cache
+CacheEntry:
+  $ref: './cache.yaml#/CacheEntry'
+CacheHitPayload:
+  $ref: './cache.yaml#/CacheHitPayload'
+CacheMissPayload:
+  $ref: './cache.yaml#/CacheMissPayload'
+CacheUploadedPayload:
+  $ref: './cache.yaml#/CacheUploadedPayload'
+CacheEvictedPayload:
+  $ref: './cache.yaml#/CacheEvictedPayload'
+
+# Secrets
+SecretReference:
+  $ref: './secrets.yaml#/SecretReference'
+SecretSource:
+  $ref: './secrets.yaml#/SecretSource'
+OxideSecret:
+  $ref: './secrets.yaml#/OxideSecret'
+SecretAccessedPayload:
+  $ref: './secrets.yaml#/SecretAccessedPayload'
+SecretRotatedPayload:
+  $ref: './secrets.yaml#/SecretRotatedPayload'
+
+# Authentication (OIDC)
+OIDCTokenRequest:
+  $ref: './auth.yaml#/OIDCTokenRequest'
+OIDCClaims:
+  $ref: './auth.yaml#/OIDCClaims'
+OIDCTokenResponse:
+  $ref: './auth.yaml#/OIDCTokenResponse'
+IdentityProviderConfig:
+  $ref: './auth.yaml#/IdentityProviderConfig'
+
+# Matrix Builds
+MatrixExpansion:
+  $ref: './matrix.yaml#/MatrixExpansion'
+MatrixJob:
+  $ref: './matrix.yaml#/MatrixJob'
+MatrixJobStartedPayload:
+  $ref: './matrix.yaml#/MatrixJobStartedPayload'
+MatrixJobCompletedPayload:
+  $ref: './matrix.yaml#/MatrixJobCompletedPayload'
+MatrixCompletedPayload:
+  $ref: './matrix.yaml#/MatrixCompletedPayload'
+MatrixCancelledPayload:
+  $ref: './matrix.yaml#/MatrixCancelledPayload'
+
+# Approval Gates
+ApprovalGate:
+  $ref: './approval.yaml#/ApprovalGate'
+ApprovalRequestedPayload:
+  $ref: './approval.yaml#/ApprovalRequestedPayload'
+ApprovalGrantedPayload:
+  $ref: './approval.yaml#/ApprovalGrantedPayload'
+ApprovalRejectedPayload:
+  $ref: './approval.yaml#/ApprovalRejectedPayload'
+ApprovalExpiredPayload:
+  $ref: './approval.yaml#/ApprovalExpiredPayload'
+EnvironmentProtectionRule:
+  $ref: './approval.yaml#/EnvironmentProtectionRule'
+
+# Notifications
+NotificationChannel:
+  $ref: './notification.yaml#/NotificationChannel'
+NotificationSentPayload:
+  $ref: './notification.yaml#/NotificationSentPayload'
+NotificationFailedPayload:
+  $ref: './notification.yaml#/NotificationFailedPayload'
+
+# Distributed Tracing
+TraceContext:
+  $ref: './trace.yaml#/TraceContext'
+Span:
+  $ref: './trace.yaml#/Span'
+TracingConfig:
+  $ref: './trace.yaml#/TracingConfig'

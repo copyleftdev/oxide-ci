@@ -1,0 +1,25 @@
+# Licensing Messages (Keygen Integration)
+
+LicenseValidated:
+  name: LicenseValidated
+  title: License Validated Event
+  description: Emitted when a license key is successfully validated against Keygen
+  contentType: application/json
+  payload:
+    $ref: '../schemas/licensing.yaml#/LicenseValidatedPayload'
+
+LicenseExpired:
+  name: LicenseExpired
+  title: License Expired Event
+  description: Emitted when a license reaches its expiration date
+  contentType: application/json
+  payload:
+    $ref: '../schemas/licensing.yaml#/LicenseExpiredPayload'
+
+LicenseSuspended:
+  name: LicenseSuspended
+  title: License Suspended Event
+  description: Emitted when a license is suspended due to payment failure or policy violation
+  contentType: application/json
+  payload:
+    $ref: '../schemas/licensing.yaml#/LicenseSuspendedPayload'

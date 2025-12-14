@@ -1,0 +1,55 @@
+# Matrix Build Channels
+
+expanded:
+  address: matrix.expanded.{run_id}
+  description: Emitted when a matrix is expanded into jobs
+  parameters:
+    run_id:
+      description: Run identifier
+  messages:
+    matrixExpanded:
+      $ref: '../messages/matrix.yaml#/MatrixExpanded'
+
+job-started:
+  address: matrix.{matrix_id}.job.{job_id}.started
+  description: Emitted when a matrix job starts
+  parameters:
+    matrix_id:
+      description: Matrix identifier
+    job_id:
+      description: Job identifier
+  messages:
+    matrixJobStarted:
+      $ref: '../messages/matrix.yaml#/MatrixJobStarted'
+
+job-completed:
+  address: matrix.{matrix_id}.job.{job_id}.completed
+  description: Emitted when a matrix job finishes
+  parameters:
+    matrix_id:
+      description: Matrix identifier
+    job_id:
+      description: Job identifier
+  messages:
+    matrixJobCompleted:
+      $ref: '../messages/matrix.yaml#/MatrixJobCompleted'
+
+completed:
+  address: matrix.{matrix_id}.completed
+  description: Emitted when all matrix jobs finish
+  parameters:
+    matrix_id:
+      description: Matrix identifier
+  messages:
+    matrixCompleted:
+      $ref: '../messages/matrix.yaml#/MatrixCompleted'
+
+cancelled:
+  address: matrix.{matrix_id}.cancelled
+  description: Emitted when a matrix is cancelled (e.g., fail-fast)
+  parameters:
+    matrix_id:
+      description: Matrix identifier
+  messages:
+    matrixCancelled:
+      $ref: '../messages/matrix.yaml#/MatrixCancelled'

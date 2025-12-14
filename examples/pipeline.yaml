@@ -1,0 +1,211 @@
+# Example Oxide CI Pipeline
+# This file demonstrates the pipeline definition schema
+
+version: "1"
+name: Build and Deploy
+
+triggers:
+  - type: push
+    branches:
+      - main
+      - "release/*"
+  - type: pull_request
+    branches:
+      - main
+  - type: cron
+    cron: "0 2 * * *"
+    timezone: "UTC"
+
+variables:
+  RUST_VERSION: "1.75"
+  NODE_VERSION: "20"
+
+concurrency:
+  group: "deploy-${{ branch }}"
+  cancel_in_progress: true
+
+cache:
+  paths:
+    - "~/.cargo/registry"
+    - "~/.cargo/git"
+    - "target"
+  key: "rust-${{ hashFiles('Cargo.lock') }}"
+  restore_keys:
+    - "rust-"
+
+stages:
+  - name: test
+    display_name: "Run Tests"
+    environment:
+      type: container
+      container:
+        image: "rust:1.75-slim"
+        resources:
+          cpu: "2"
+          memory: "4Gi"
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: lint
+        run: |
+          rustup component add clippy rustfmt
+          cargo fmt --check
+          cargo clippy -- -D warnings
+      
+      - name: test
+        run: cargo test --all-features
+        timeout_minutes: 15
+        retry:
+          max_attempts: 2
+          delay_seconds: 10
+
+  - name: build-linux
+    display_name: "Build (Linux)"
+    depends_on:
+      - test
+    environment:
+      type: container
+      container:
+        image: "rust:1.75-slim"
+    agent:
+      labels:
+        - linux
+        - docker
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: build
+        run: cargo build --release
+        outputs:
+          - BINARY_PATH
+      
+      - name: upload-artifact
+        plugin: "oxide/upload-artifact@v1"
+        variables:
+          name: "oxide-linux-x64"
+          path: "target/release/oxide"
+
+  - name: build-macos
+    display_name: "Build (macOS)"
+    depends_on:
+      - test
+    environment:
+      type: nix
+      nix:
+        packages:
+          - rustc
+          - cargo
+        pure: true
+    agent:
+      labels:
+        - macos
+        - aarch64
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: build
+        run: cargo build --release
+      
+      - name: upload-artifact
+        plugin: "oxide/upload-artifact@v1"
+        variables:
+          name: "oxide-macos-arm64"
+          path: "target/release/oxide"
+
+  - name: security-scan
+    display_name: "Security Scan"
+    depends_on:
+      - test
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: audit
+        run: cargo audit
+        continue_on_error: true
+      
+      - name: trivy
+        plugin: "oxide/trivy@v1"
+        variables:
+          severity: "HIGH,CRITICAL"
+
+  - name: deploy-staging
+    display_name: "Deploy to Staging"
+    depends_on:
+      - build-linux
+      - build-macos
+      - security-scan
+    condition:
+      if: "branch == 'main'"
+    environment:
+      type: container
+      container:
+        image: "alpine:3.19"
+    secrets:
+      - name: AWS_ACCESS_KEY_ID
+        source:
+          provider: oxide
+          path: "aws/staging"
+        key: access_key_id
+      - name: AWS_SECRET_ACCESS_KEY
+        source:
+          provider: oxide
+          path: "aws/staging"
+        key: secret_access_key
+    steps:
+      - name: download-artifacts
+        plugin: "oxide/download-artifact@v1"
+        variables:
+          name: "oxide-linux-x64"
+          path: "./dist"
+      
+      - name: deploy
+        plugin: "oxide/aws-s3-sync@v1"
+        variables:
+          source: "./dist"
+          bucket: "oxide-staging"
+
+  - name: deploy-production
+    display_name: "Deploy to Production"
+    depends_on:
+      - deploy-staging
+    condition:
+      if: "branch == 'main'"
+    steps:
+      - name: approval
+        plugin: "oxide/approval-gate@v1"
+        variables:
+          message: "Approve production deployment?"
+          required_approvers: 2
+          allowed_approvers:
+            - "@platform-team"
+          timeout_minutes: 60
+      
+      - name: deploy
+        plugin: "oxide/aws-s3-sync@v1"
+        secrets:
+          - name: AWS_ACCESS_KEY_ID
+            source:
+              provider: aws_secrets_manager
+              path: "/oxide/prod/aws"
+            key: access_key_id
+          - name: AWS_SECRET_ACCESS_KEY
+            source:
+              provider: aws_secrets_manager
+              path: "/oxide/prod/aws"
+            key: secret_access_key
+        variables:
+          source: "./dist"
+          bucket: "oxide-production"
+
+artifacts:
+  paths:
+    - "target/release/oxide"
+    - "coverage/**"
+  retention_days: 30
+  compression: zstd
+
+timeout_minutes: 45

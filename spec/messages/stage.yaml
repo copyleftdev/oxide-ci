@@ -1,0 +1,15 @@
+# Stage Lifecycle Messages
+
+StageStarted:
+  name: StageStarted
+  title: Stage Started Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/stage.yaml#/StageStartedPayload'
+
+StageCompleted:
+  name: StageCompleted
+  title: Stage Completed Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/stage.yaml#/StageCompletedPayload'

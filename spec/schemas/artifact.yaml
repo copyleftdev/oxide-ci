@@ -1,0 +1,37 @@
+# Artifact Schemas
+
+ArtifactUploadedPayload:
+  type: object
+  required:
+    - run_id
+    - artifact_id
+    - name
+    - size_bytes
+    - uploaded_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    artifact_id:
+      $ref: './common.yaml#/Uuid'
+    name:
+      type: string
+      examples:
+        - "build-output.tar.gz"
+    path:
+      type: string
+      description: Original path in workspace
+    size_bytes:
+      type: integer
+    content_type:
+      type: string
+      examples:
+        - "application/gzip"
+    checksum_sha256:
+      type: string
+    download_url:
+      type: string
+      format: uri
+    expires_at:
+      $ref: './common.yaml#/Timestamp'
+    uploaded_at:
+      $ref: './common.yaml#/Timestamp'

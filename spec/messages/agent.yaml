@@ -1,0 +1,22 @@
+# Agent Pool Messages
+
+AgentRegistered:
+  name: AgentRegistered
+  title: Agent Registered Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/agent.yaml#/Agent'
+
+AgentHeartbeat:
+  name: AgentHeartbeat
+  title: Agent Heartbeat
+  contentType: application/json
+  payload:
+    $ref: '../schemas/agent.yaml#/AgentHeartbeatPayload'
+
+AgentDisconnected:
+  name: AgentDisconnected
+  title: Agent Disconnected Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/agent.yaml#/AgentDisconnectedPayload'

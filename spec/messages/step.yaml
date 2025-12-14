@@ -1,0 +1,23 @@
+# Step Lifecycle Messages
+
+StepStarted:
+  name: StepStarted
+  title: Step Started Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/step.yaml#/StepStartedPayload'
+
+StepOutput:
+  name: StepOutput
+  title: Step Output Stream
+  description: Real-time log line from step execution
+  contentType: application/json
+  payload:
+    $ref: '../schemas/step.yaml#/StepOutputPayload'
+
+StepCompleted:
+  name: StepCompleted
+  title: Step Completed Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/step.yaml#/StepCompletedPayload'

@@ -1,0 +1,96 @@
+# Operations Index
+
+# Run Operations
+onRunQueued:
+  action: receive
+  channel:
+    $ref: '../channels/run.yaml#/queued'
+  summary: Receive notification when a run is queued
+
+onRunStarted:
+  action: receive
+  channel:
+    $ref: '../channels/run.yaml#/started'
+  summary: Receive notification when a run starts
+
+onRunCompleted:
+  action: receive
+  channel:
+    $ref: '../channels/run.yaml#/completed'
+  summary: Receive notification when a run completes
+
+onRunCancelled:
+  action: receive
+  channel:
+    $ref: '../channels/run.yaml#/cancelled'
+  summary: Receive notification when a run is cancelled
+
+# Step Operations
+onStepOutput:
+  action: receive
+  channel:
+    $ref: '../channels/step.yaml#/output'
+  summary: Stream real-time log output from steps
+
+# Agent Operations
+onAgentRegistered:
+  action: receive
+  channel:
+    $ref: '../channels/agent.yaml#/registered'
+  summary: Receive notification when an agent joins
+
+onAgentHeartbeat:
+  action: receive
+  channel:
+    $ref: '../channels/agent.yaml#/heartbeat'
+  summary: Monitor agent health
+
+onAgentDisconnected:
+  action: receive
+  channel:
+    $ref: '../channels/agent.yaml#/disconnected'
+  summary: Receive notification when an agent leaves
+
+# Licensing Operations
+onLicenseValidated:
+  action: receive
+  channel:
+    $ref: '../channels/licensing.yaml#/validated'
+  summary: Receive license validation confirmation
+
+onLicenseExpired:
+  action: receive
+  channel:
+    $ref: '../channels/licensing.yaml#/expired'
+  summary: Receive notification when license expires
+
+onLicenseSuspended:
+  action: receive
+  channel:
+    $ref: '../channels/licensing.yaml#/suspended'
+  summary: Receive notification when license is suspended
+
+# Billing Operations
+onSubscriptionCreated:
+  action: receive
+  channel:
+    $ref: '../channels/billing.yaml#/subscription-created'
+  summary: Receive notification when subscription is created
+
+onSubscriptionCancelled:
+  action: receive
+  channel:
+    $ref: '../channels/billing.yaml#/subscription-cancelled'
+  summary: Receive notification when subscription is cancelled
+
+onPaymentSucceeded:
+  action: receive
+  channel:
+    $ref: '../channels/billing.yaml#/payment-succeeded'
+  summary: Receive notification when payment succeeds
+
+onPaymentFailed:
+  action: receive
+  channel:
+    $ref: '../channels/billing.yaml#/payment-failed'
+  summary: Receive notification when payment fails

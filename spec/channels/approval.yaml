@@ -1,0 +1,41 @@
+# Approval Gate Channels
+
+requested:
+  address: approval.requested.{gate_id}
+  description: Emitted when approval is needed to proceed
+  parameters:
+    gate_id:
+      description: Approval gate identifier
+  messages:
+    approvalRequested:
+      $ref: '../messages/approval.yaml#/ApprovalRequested'
+
+granted:
+  address: approval.granted.{gate_id}
+  description: Emitted when an approver grants approval
+  parameters:
+    gate_id:
+      description: Approval gate identifier
+  messages:
+    approvalGranted:
+      $ref: '../messages/approval.yaml#/ApprovalGranted'
+
+rejected:
+  address: approval.rejected.{gate_id}
+  description: Emitted when an approver rejects
+  parameters:
+    gate_id:
+      description: Approval gate identifier
+  messages:
+    approvalRejected:
+      $ref: '../messages/approval.yaml#/ApprovalRejected'
+
+expired:
+  address: approval.expired.{gate_id}
+  description: Emitted when approval request times out
+  parameters:
+    gate_id:
+      description: Approval gate identifier
+  messages:
+    approvalExpired:
+      $ref: '../messages/approval.yaml#/ApprovalExpired'

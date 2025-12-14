@@ -1,0 +1,229 @@
+# Execution Environment Schemas
+# Defines container, VM, and reproducible build environments
+
+ExecutionEnvironment:
+  type: object
+  properties:
+    type:
+      type: string
+      enum:
+        - container
+        - firecracker
+        - nix
+        - host
+      default: container
+      description: Execution environment type
+    container:
+      $ref: '#/ContainerConfig'
+    firecracker:
+      $ref: '#/FirecrackerConfig'
+    nix:
+      $ref: '#/NixConfig'
+
+ContainerConfig:
+  type: object
+  properties:
+    image:
+      type: string
+      description: OCI image reference
+      examples:
+        - "node:20-alpine"
+        - "ghcr.io/oxide-ci/rust:1.75"
+    registry:
+      $ref: '#/RegistryAuth'
+    shell:
+      type: string
+      enum:
+        - bash
+        - sh
+        - powershell
+        - pwsh
+      default: bash
+    user:
+      type: string
+      description: User to run as inside container
+    workdir:
+      type: string
+      description: Working directory inside container
+    entrypoint:
+      type: array
+      items:
+        type: string
+      description: Override container entrypoint
+    volumes:
+      type: array
+      items:
+        $ref: '#/VolumeMount'
+    network:
+      type: string
+      enum:
+        - bridge
+        - host
+        - none
+      default: bridge
+    privileged:
+      type: boolean
+      default: false
+      description: Run container in privileged mode (requires entitlement)
+    capabilities:
+      type: array
+      items:
+        type: string
+      description: Linux capabilities to add
+      examples:
+        - ["SYS_PTRACE", "NET_ADMIN"]
+    resources:
+      $ref: '#/ResourceLimits'
+
+FirecrackerConfig:
+  type: object
+  properties:
+    kernel:
+      type: string
+      description: Kernel image reference
+      examples:
+        - "oxide/kernel:5.10"
+    rootfs:
+      type: string
+      description: Root filesystem image
+      examples:
+        - "oxide/ubuntu:22.04"
+    vcpu_count:
+      type: integer
+      minimum: 1
+      maximum: 32
+      default: 2
+    memory_mb:
+      type: integer
+      minimum: 128
+      maximum: 32768
+      default: 2048
+    disk_size_gb:
+      type: integer
+      default: 10
+    network:
+      type: boolean
+      default: true
+    boot_timeout_seconds:
+      type: integer
+      default: 30
+
+NixConfig:
+  type: object
+  properties:
+    flake:
+      type: string
+      description: Nix flake reference
+      examples:
+        - "github:NixOS/nixpkgs#nodejs_20"
+        - ".#devShell"
+    packages:
+      type: array
+      items:
+        type: string
+      description: Nix packages to include
+      examples:
+        - ["nodejs", "rustc", "cargo"]
+    shell_hook:
+      type: string
+      description: Shell hook to run on environment entry
+    pure:
+      type: boolean
+      default: true
+      description: Use pure Nix environment (no host leakage)
+    sandbox:
+      type: boolean
+      default: true
+    substituters:
+      type: array
+      items:
+        type: string
+      description: Binary cache URLs
+      examples:
+        - ["https://cache.nixos.org", "https://nix.oxideci.io"]
+
+RegistryAuth:
+  type: object
+  properties:
+    url:
+      type: string
+      description: Registry URL
+      examples:
+        - "ghcr.io"
+        - "registry.gitlab.com"
+    username:
+      type: string
+    password_secret:
+      type: string
+      description: Secret name containing registry password
+    aws_ecr:
+      type: boolean
+      default: false
+      description: Use AWS ECR authentication
+    gcp_gcr:
+      type: boolean
+      default: false
+      description: Use GCP Artifact Registry authentication
+
+VolumeMount:
+  type: object
+  required:
+    - source
+    - target
+  properties:
+    source:
+      type: string
+      description: Host path or volume name
+    target:
+      type: string
+      description: Mount path inside container
+    read_only:
+      type: boolean
+      default: false
+    type:
+      type: string
+      enum:
+        - bind
+        - volume
+        - tmpfs
+        - cache
+      default: bind
+
+ResourceLimits:
+  type: object
+  properties:
+    cpu:
+      type: string
+      description: CPU limit (e.g., "2", "500m")
+      examples:
+        - "2"
+        - "500m"
+    memory:
+      type: string
+      description: Memory limit (e.g., "4Gi", "512Mi")
+      examples:
+        - "4Gi"
+        - "512Mi"
+    disk:
+      type: string
+      description: Disk space limit
+      examples:
+        - "10Gi"
+    gpu:
+      $ref: '#/GPUConfig'
+
+GPUConfig:
+  type: object
+  properties:
+    count:
+      type: integer
+      minimum: 0
+      default: 0
+    vendor:
+      type: string
+      enum:
+        - nvidia
+        - amd
+    driver_version:
+      type: string
+      description: Minimum driver version required

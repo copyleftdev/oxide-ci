@@ -1,0 +1,15 @@
+# Webhook Messages
+
+GitHubPush:
+  name: GitHubPush
+  title: GitHub Push Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/webhook.yaml#/GitHubPushPayload'
+
+GitHubPullRequest:
+  name: GitHubPullRequest
+  title: GitHub Pull Request Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/webhook.yaml#/GitHubPullRequestPayload'

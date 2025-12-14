@@ -1,0 +1,37 @@
+# Step Lifecycle Channels
+
+started:
+  address: run.{run_id}.step.{step_id}.started
+  description: Emitted when a step begins execution
+  parameters:
+    run_id:
+      description: The run identifier
+    step_id:
+      description: The step identifier
+  messages:
+    stepStarted:
+      $ref: '../messages/step.yaml#/StepStarted'
+
+output:
+  address: run.{run_id}.step.{step_id}.output
+  description: Real-time stdout/stderr streaming from step execution
+  parameters:
+    run_id:
+      description: The run identifier
+    step_id:
+      description: The step identifier
+  messages:
+    stepOutput:
+      $ref: '../messages/step.yaml#/StepOutput'
+
+completed:
+  address: run.{run_id}.step.{step_id}.completed
+  description: Emitted when a step finishes
+  parameters:
+    run_id:
+      description: The run identifier
+    step_id:
+      description: The step identifier
+  messages:
+    stepCompleted:
+      $ref: '../messages/step.yaml#/StepCompleted'

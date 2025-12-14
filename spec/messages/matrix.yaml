@@ -1,0 +1,36 @@
+# Matrix Build Messages
+
+MatrixExpanded:
+  name: MatrixExpanded
+  title: Matrix Expanded Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/matrix.yaml#/MatrixExpansion'
+
+MatrixJobStarted:
+  name: MatrixJobStarted
+  title: Matrix Job Started Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/matrix.yaml#/MatrixJobStartedPayload'
+
+MatrixJobCompleted:
+  name: MatrixJobCompleted
+  title: Matrix Job Completed Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/matrix.yaml#/MatrixJobCompletedPayload'
+
+MatrixCompleted:
+  name: MatrixCompleted
+  title: Matrix Completed Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/matrix.yaml#/MatrixCompletedPayload'
+
+MatrixCancelled:
+  name: MatrixCancelled
+  title: Matrix Cancelled Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/matrix.yaml#/MatrixCancelledPayload'

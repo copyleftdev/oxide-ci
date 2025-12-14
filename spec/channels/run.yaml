@@ -1,0 +1,47 @@
+# Run Lifecycle Channels
+
+queued:
+  address: run.queued.{pipeline_id}
+  description: Emitted when a run is queued for execution
+  parameters:
+    pipeline_id:
+      description: The pipeline identifier
+  messages:
+    runQueued:
+      $ref: '../messages/run.yaml#/RunQueued'
+
+started:
+  address: run.started.{pipeline_id}.{run_id}
+  description: Emitted when a run begins execution
+  parameters:
+    pipeline_id:
+      description: The pipeline identifier
+    run_id:
+      description: The run identifier
+  messages:
+    runStarted:
+      $ref: '../messages/run.yaml#/RunStarted'
+
+completed:
+  address: run.completed.{pipeline_id}.{run_id}
+  description: Emitted when a run finishes (success or failure)
+  parameters:
+    pipeline_id:
+      description: The pipeline identifier
+    run_id:
+      description: The run identifier
+  messages:
+    runCompleted:
+      $ref: '../messages/run.yaml#/RunCompleted'
+
+cancelled:
+  address: run.cancelled.{pipeline_id}.{run_id}
+  description: Emitted when a run is cancelled
+  parameters:
+    pipeline_id:
+      description: The pipeline identifier
+    run_id:
+      description: The run identifier
+  messages:
+    runCancelled:
+      $ref: '../messages/run.yaml#/RunCancelled'

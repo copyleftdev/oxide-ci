@@ -1,0 +1,121 @@
+# Example Matrix Build Pipeline
+# Demonstrates parallel testing across multiple OS/version combinations
+
+version: "1"
+name: Cross-Platform Test Matrix
+
+triggers:
+  - type: push
+    branches:
+      - main
+  - type: pull_request
+
+stages:
+  - name: test
+    display_name: "Test Matrix"
+    matrix:
+      dimensions:
+        os:
+          - linux
+          - macos
+          - windows
+        rust:
+          - "1.74"
+          - "1.75"
+          - "stable"
+        include:
+          - os: linux
+            rust: nightly
+            experimental: true
+        exclude:
+          - os: windows
+            rust: "1.74"
+      fail_fast: true
+      max_parallel: 6
+    
+    environment:
+      type: container
+      container:
+        image: "rust:${{ matrix.rust }}"
+    
+    agent:
+      labels:
+        - "${{ matrix.os }}"
+    
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: setup-rust
+        run: |
+          rustup default ${{ matrix.rust }}
+          rustup component add clippy
+      
+      - name: test
+        run: cargo test --all-features
+        continue_on_error: "${{ matrix.experimental || false }}"
+
+  - name: build-release
+    display_name: "Build Release Binaries"
+    depends_on:
+      - test
+    condition:
+      if: "branch == 'main' && event != 'pull_request'"
+    
+    matrix:
+      dimensions:
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-gnu
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
+      max_parallel: 3
+    
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: setup-cross
+        run: cargo install cross
+      
+      - name: build
+        run: cross build --release --target ${{ matrix.target }}
+      
+      - name: upload
+        plugin: "oxide/upload-artifact@v1"
+        variables:
+          name: "oxide-${{ matrix.target }}"
+          path: "target/${{ matrix.target }}/release/oxide*"
+
+  - name: publish
+    display_name: "Publish Release"
+    depends_on:
+      - build-release
+    condition:
+      if: "startsWith(ref, 'refs/tags/v')"
+    
+    steps:
+      - name: download-all
+        plugin: "oxide/download-artifact@v1"
+        variables:
+          pattern: "oxide-*"
+          path: "./artifacts"
+      
+      - name: create-checksums
+        run: |
+          cd artifacts
+          sha256sum * > SHA256SUMS
+      
+      - name: github-release
+        plugin: "oxide/github-release@v1"
+        secrets:
+          - name: GITHUB_TOKEN
+            source:
+              provider: oxide
+              path: "github/release-token"
+        variables:
+          tag: "${{ ref }}"
+          files: "./artifacts/*"
+          generate_notes: true

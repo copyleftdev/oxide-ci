@@ -1,0 +1,46 @@
+# Stage Schemas
+
+StageStartedPayload:
+  type: object
+  required:
+    - run_id
+    - stage_name
+    - stage_index
+    - started_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    stage_index:
+      type: integer
+    step_count:
+      type: integer
+    started_at:
+      $ref: './common.yaml#/Timestamp'
+
+StageCompletedPayload:
+  type: object
+  required:
+    - run_id
+    - stage_name
+    - status
+    - duration_ms
+    - completed_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    stage_index:
+      type: integer
+    status:
+      $ref: './common.yaml#/Status'
+    duration_ms:
+      type: integer
+    steps_passed:
+      type: integer
+    steps_failed:
+      type: integer
+    completed_at:
+      $ref: './common.yaml#/Timestamp'

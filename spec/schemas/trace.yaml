@@ -1,0 +1,230 @@
+# Distributed Tracing Schemas
+# OpenTelemetry-compatible trace context and spans
+
+TraceContext:
+  type: object
+  required:
+    - trace_id
+    - span_id
+  properties:
+    trace_id:
+      type: string
+      pattern: "^[a-f0-9]{32}$"
+      description: W3C Trace Context trace-id (32 hex chars)
+      examples:
+        - "4bf92f3577b34da6a3ce929d0e0e4736"
+    span_id:
+      type: string
+      pattern: "^[a-f0-9]{16}$"
+      description: W3C Trace Context span-id (16 hex chars)
+      examples:
+        - "00f067aa0ba902b7"
+    parent_span_id:
+      type: string
+      pattern: "^[a-f0-9]{16}$"
+      description: Parent span ID
+    trace_flags:
+      type: string
+      pattern: "^[a-f0-9]{2}$"
+      default: "01"
+      description: Trace flags (01 = sampled)
+    trace_state:
+      type: string
+      description: W3C Trace Context tracestate header value
+
+Span:
+  type: object
+  required:
+    - trace_id
+    - span_id
+    - name
+    - kind
+    - start_time
+  properties:
+    trace_id:
+      type: string
+    span_id:
+      type: string
+    parent_span_id:
+      type: string
+    name:
+      type: string
+      description: Span operation name
+      examples:
+        - "run.execute"
+        - "stage.build"
+        - "step.npm-install"
+    kind:
+      type: string
+      enum:
+        - internal
+        - server
+        - client
+        - producer
+        - consumer
+    status:
+      $ref: '#/SpanStatus'
+    attributes:
+      type: object
+      additionalProperties: true
+      description: Span attributes (key-value pairs)
+    events:
+      type: array
+      items:
+        $ref: '#/SpanEvent'
+    links:
+      type: array
+      items:
+        $ref: '#/SpanLink'
+    start_time:
+      $ref: './common.yaml#/Timestamp'
+    end_time:
+      $ref: './common.yaml#/Timestamp'
+    duration_ns:
+      type: integer
+      description: Duration in nanoseconds
+
+SpanStatus:
+  type: object
+  properties:
+    code:
+      type: string
+      enum:
+        - unset
+        - ok
+        - error
+    message:
+      type: string
+
+SpanEvent:
+  type: object
+  required:
+    - name
+    - timestamp
+  properties:
+    name:
+      type: string
+      examples:
+        - "cache.hit"
+        - "docker.pull.start"
+        - "error"
+    timestamp:
+      $ref: './common.yaml#/Timestamp'
+    attributes:
+      type: object
+      additionalProperties: true
+
+SpanLink:
+  type: object
+  required:
+    - trace_id
+    - span_id
+  properties:
+    trace_id:
+      type: string
+    span_id:
+      type: string
+    attributes:
+      type: object
+      additionalProperties: true
+
+# Standard CI/CD span attributes
+CISpanAttributes:
+  type: object
+  properties:
+    ci.pipeline.id:
+      type: string
+    ci.pipeline.name:
+      type: string
+    ci.run.id:
+      type: string
+    ci.run.number:
+      type: integer
+    ci.stage.name:
+      type: string
+    ci.step.name:
+      type: string
+    ci.step.plugin:
+      type: string
+    ci.agent.id:
+      type: string
+    ci.agent.name:
+      type: string
+    vcs.repository:
+      type: string
+    vcs.ref:
+      type: string
+    vcs.sha:
+      type: string
+    vcs.author:
+      type: string
+
+# OTLP Export Configuration
+OTLPExporterConfig:
+  type: object
+  properties:
+    endpoint:
+      type: string
+      format: uri
+      description: OTLP endpoint URL
+      examples:
+        - "https://otel-collector.example.com:4317"
+    protocol:
+      type: string
+      enum:
+        - grpc
+        - http/protobuf
+        - http/json
+      default: grpc
+    headers:
+      type: object
+      additionalProperties:
+        type: string
+      description: Additional headers (e.g., auth tokens)
+    compression:
+      type: string
+      enum:
+        - none
+        - gzip
+      default: gzip
+    timeout_seconds:
+      type: integer
+      default: 10
+    batch_size:
+      type: integer
+      default: 512
+    export_interval_ms:
+      type: integer
+      default: 5000
+
+TracingConfig:
+  type: object
+  properties:
+    enabled:
+      type: boolean
+      default: true
+    sample_rate:
+      type: number
+      minimum: 0
+      maximum: 1
+      default: 1.0
+      description: Sampling rate (1.0 = 100%)
+    exporters:
+      type: array
+      items:
+        $ref: '#/OTLPExporterConfig'
+    propagators:
+      type: array
+      items:
+        type: string
+        enum:
+          - tracecontext
+          - baggage
+          - b3
+          - jaeger
+      default: ["tracecontext", "baggage"]
+    resource_attributes:
+      type: object
+      additionalProperties:
+        type: string
+      description: Resource attributes added to all spans

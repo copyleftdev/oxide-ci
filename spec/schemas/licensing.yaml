@@ -1,0 +1,135 @@
+# Licensing Schemas (Keygen Integration)
+# https://keygen.sh/docs/api/
+
+License:
+  type: object
+  required:
+    - id
+    - key
+    - policy_id
+    - status
+  properties:
+    id:
+      type: string
+      description: Keygen license ID
+    key:
+      type: string
+      description: License key (masked in events)
+    policy_id:
+      type: string
+      description: Keygen policy ID
+    policy_name:
+      type: string
+      enum:
+        - starter
+        - professional
+        - enterprise
+        - trial
+    status:
+      type: string
+      enum:
+        - active
+        - inactive
+        - expired
+        - suspended
+        - banned
+    max_agents:
+      type: integer
+      description: Maximum concurrent agents allowed
+    max_pipelines:
+      type: integer
+      description: Maximum pipelines allowed
+    max_runs_per_month:
+      type: integer
+      description: Maximum runs per billing cycle
+    features:
+      type: array
+      items:
+        type: string
+      description: Enabled feature flags
+      examples:
+        - ["priority-queue", "parallel-stages", "custom-plugins"]
+    metadata:
+      type: object
+      additionalProperties: true
+    expires_at:
+      $ref: './common.yaml#/Timestamp'
+    created_at:
+      $ref: './common.yaml#/Timestamp'
+
+LicenseValidatedPayload:
+  type: object
+  required:
+    - license_id
+    - policy_name
+    - validated_at
+  properties:
+    license_id:
+      type: string
+    policy_name:
+      type: string
+    machine_id:
+      type: string
+      description: Keygen machine fingerprint
+    machine_name:
+      type: string
+    entitlements:
+      type: array
+      items:
+        type: string
+      description: Active entitlements
+    usage:
+      type: object
+      properties:
+        agents_used:
+          type: integer
+        agents_limit:
+          type: integer
+        runs_this_month:
+          type: integer
+        runs_limit:
+          type: integer
+    validated_at:
+      $ref: './common.yaml#/Timestamp'
+    next_check_at:
+      $ref: './common.yaml#/Timestamp'
+
+LicenseExpiredPayload:
+  type: object
+  required:
+    - license_id
+    - expired_at
+  properties:
+    license_id:
+      type: string
+    policy_name:
+      type: string
+    grace_period_ends_at:
+      $ref: './common.yaml#/Timestamp'
+      description: End of grace period before suspension
+    expired_at:
+      $ref: './common.yaml#/Timestamp'
+
+LicenseSuspendedPayload:
+  type: object
+  required:
+    - license_id
+    - reason
+    - suspended_at
+  properties:
+    license_id:
+      type: string
+    reason:
+      type: string
+      enum:
+        - payment_failed
+        - policy_violation
+        - manual
+        - expired
+    stripe_invoice_id:
+      type: string
+      description: Failed invoice ID if payment-related
+    suspended_at:
+      $ref: './common.yaml#/Timestamp'
+    can_reactivate:
+      type: boolean

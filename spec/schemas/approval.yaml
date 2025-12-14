@@ -1,0 +1,306 @@
+# Approval Gate Schemas
+# Defines manual approval workflows and deployment protection
+
+ApprovalGate:
+  type: object
+  required:
+    - id
+    - run_id
+    - stage_name
+    - status
+    - created_at
+  properties:
+    id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    environment:
+      type: string
+      description: Target deployment environment
+      examples:
+        - "production"
+        - "staging"
+    status:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+        - expired
+        - bypassed
+    required_approvers:
+      type: integer
+      minimum: 1
+      default: 1
+    current_approvals:
+      type: integer
+      default: 0
+    approvers:
+      type: array
+      items:
+        $ref: '#/Approver'
+    allowed_approvers:
+      type: array
+      items:
+        type: string
+      description: Users or teams allowed to approve
+    prevent_self_approval:
+      type: boolean
+      default: true
+    timeout_minutes:
+      type: integer
+      default: 1440
+      description: Auto-expire after N minutes (default 24h)
+    message:
+      type: string
+      description: Message shown to approvers
+    created_at:
+      $ref: './common.yaml#/Timestamp'
+    expires_at:
+      $ref: './common.yaml#/Timestamp'
+
+Approver:
+  type: object
+  required:
+    - user_id
+    - action
+    - acted_at
+  properties:
+    user_id:
+      type: string
+    user_name:
+      type: string
+    user_email:
+      type: string
+    action:
+      type: string
+      enum:
+        - approved
+        - rejected
+    comment:
+      type: string
+    acted_at:
+      $ref: './common.yaml#/Timestamp'
+
+ApprovalRequestedPayload:
+  type: object
+  required:
+    - gate_id
+    - run_id
+    - stage_name
+    - requested_at
+  properties:
+    gate_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_name:
+      type: string
+    stage_name:
+      type: string
+    environment:
+      type: string
+    triggered_by:
+      type: string
+    git_ref:
+      type: string
+    git_sha:
+      type: string
+    required_approvers:
+      type: integer
+    allowed_approvers:
+      type: array
+      items:
+        type: string
+    message:
+      type: string
+    approval_url:
+      type: string
+      format: uri
+      description: URL to approve/reject
+    expires_at:
+      $ref: './common.yaml#/Timestamp'
+    requested_at:
+      $ref: './common.yaml#/Timestamp'
+
+ApprovalGrantedPayload:
+  type: object
+  required:
+    - gate_id
+    - run_id
+    - approved_by
+    - approved_at
+  properties:
+    gate_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    environment:
+      type: string
+    approved_by:
+      type: string
+    approver_email:
+      type: string
+    comment:
+      type: string
+    current_approvals:
+      type: integer
+    required_approvals:
+      type: integer
+    fully_approved:
+      type: boolean
+      description: True if all required approvals received
+    approved_at:
+      $ref: './common.yaml#/Timestamp'
+
+ApprovalRejectedPayload:
+  type: object
+  required:
+    - gate_id
+    - run_id
+    - rejected_by
+    - rejected_at
+  properties:
+    gate_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    environment:
+      type: string
+    rejected_by:
+      type: string
+    rejector_email:
+      type: string
+    reason:
+      type: string
+    rejected_at:
+      $ref: './common.yaml#/Timestamp'
+
+ApprovalExpiredPayload:
+  type: object
+  required:
+    - gate_id
+    - run_id
+    - expired_at
+  properties:
+    gate_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    environment:
+      type: string
+    pending_approvals:
+      type: integer
+      description: Approvals still needed when expired
+    timeout_minutes:
+      type: integer
+    expired_at:
+      $ref: './common.yaml#/Timestamp'
+
+EnvironmentProtectionRule:
+  type: object
+  required:
+    - id
+    - environment
+  properties:
+    id:
+      $ref: './common.yaml#/Uuid'
+    environment:
+      type: string
+    require_approval:
+      type: boolean
+      default: true
+    required_approvers:
+      type: integer
+      default: 1
+    allowed_approvers:
+      type: array
+      items:
+        type: string
+    prevent_self_approval:
+      type: boolean
+      default: true
+    allowed_branches:
+      type: array
+      items:
+        type: string
+      description: Only these branches can deploy
+      examples:
+        - ["main", "release/*"]
+    wait_timer_minutes:
+      type: integer
+      description: Delay before deployment starts
+    custom_rules:
+      type: array
+      items:
+        $ref: '#/CustomProtectionRule'
+
+CustomProtectionRule:
+  type: object
+  required:
+    - type
+  properties:
+    type:
+      type: string
+      enum:
+        - webhook
+        - status_check
+        - time_window
+    webhook_url:
+      type: string
+      format: uri
+    required_status_checks:
+      type: array
+      items:
+        type: string
+    allowed_time_windows:
+      type: array
+      items:
+        $ref: '#/TimeWindow'
+
+TimeWindow:
+  type: object
+  properties:
+    days:
+      type: array
+      items:
+        type: string
+        enum:
+          - monday
+          - tuesday
+          - wednesday
+          - thursday
+          - friday
+          - saturday
+          - sunday
+    start_time:
+      type: string
+      description: HH:MM in 24h format
+      examples:
+        - "09:00"
+    end_time:
+      type: string
+      examples:
+        - "17:00"
+    timezone:
+      type: string
+      examples:
+        - "America/New_York"

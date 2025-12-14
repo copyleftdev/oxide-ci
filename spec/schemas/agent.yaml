@@ -1,0 +1,108 @@
+# Agent Schemas
+
+Agent:
+  type: object
+  required:
+    - id
+    - name
+    - labels
+    - registered_at
+  properties:
+    id:
+      $ref: './common.yaml#/Uuid'
+    name:
+      type: string
+    labels:
+      type: array
+      items:
+        type: string
+      examples:
+        - ["linux", "docker", "large"]
+    version:
+      type: string
+    os:
+      type: string
+      enum:
+        - linux
+        - macos
+        - windows
+    arch:
+      type: string
+      enum:
+        - x86_64
+        - aarch64
+    capabilities:
+      type: array
+      items:
+        type: string
+        enum:
+          - docker
+          - podman
+          - firecracker
+          - nix
+    max_concurrent_jobs:
+      type: integer
+      default: 1
+    registered_at:
+      $ref: './common.yaml#/Timestamp'
+
+AgentHeartbeatPayload:
+  type: object
+  required:
+    - agent_id
+    - status
+    - timestamp
+  properties:
+    agent_id:
+      $ref: './common.yaml#/Uuid'
+    status:
+      type: string
+      enum:
+        - idle
+        - busy
+        - draining
+    current_run_id:
+      $ref: './common.yaml#/Uuid'
+    system_metrics:
+      $ref: '#/SystemMetrics'
+    timestamp:
+      $ref: './common.yaml#/Timestamp'
+
+AgentDisconnectedPayload:
+  type: object
+  required:
+    - agent_id
+    - reason
+    - disconnected_at
+  properties:
+    agent_id:
+      $ref: './common.yaml#/Uuid'
+    reason:
+      type: string
+      enum:
+        - graceful
+        - timeout
+        - error
+    last_heartbeat_at:
+      $ref: './common.yaml#/Timestamp'
+    disconnected_at:
+      $ref: './common.yaml#/Timestamp'
+
+SystemMetrics:
+  type: object
+  properties:
+    cpu_percent:
+      type: number
+    memory_used_bytes:
+      type: integer
+    memory_total_bytes:
+      type: integer
+    disk_used_bytes:
+      type: integer
+    disk_total_bytes:
+      type: integer
+    load_average:
+      type: array
+      items:
+        type: number
+      maxItems: 3

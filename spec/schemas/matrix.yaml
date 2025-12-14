@@ -1,0 +1,206 @@
+# Matrix Build Schemas
+# Defines matrix expansion and parallel execution
+
+MatrixExpansion:
+  type: object
+  required:
+    - run_id
+    - matrix_id
+    - total_combinations
+    - expanded_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    matrix_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    dimensions:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+      description: Matrix dimensions and their values
+      examples:
+        - os: ["linux", "macos", "windows"]
+          node: ["18", "20", "22"]
+    total_combinations:
+      type: integer
+      description: Total number of matrix combinations
+    effective_combinations:
+      type: integer
+      description: Combinations after include/exclude rules
+    max_parallel:
+      type: integer
+      description: Maximum parallel executions
+    fail_fast:
+      type: boolean
+    expanded_at:
+      $ref: './common.yaml#/Timestamp'
+
+MatrixJob:
+  type: object
+  required:
+    - job_id
+    - matrix_id
+    - run_id
+    - combination
+    - index
+  properties:
+    job_id:
+      $ref: './common.yaml#/Uuid'
+    matrix_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    combination:
+      type: object
+      additionalProperties: true
+      description: This job's matrix values
+      examples:
+        - os: "linux"
+          node: "20"
+    index:
+      type: integer
+      description: 0-indexed position in matrix
+    total:
+      type: integer
+      description: Total jobs in matrix
+    display_name:
+      type: string
+      description: Human-readable job name
+      examples:
+        - "build (linux, node-20)"
+
+MatrixJobStartedPayload:
+  type: object
+  required:
+    - job_id
+    - matrix_id
+    - run_id
+    - combination
+    - started_at
+  properties:
+    job_id:
+      $ref: './common.yaml#/Uuid'
+    matrix_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    combination:
+      type: object
+      additionalProperties: true
+    index:
+      type: integer
+    agent_id:
+      $ref: './common.yaml#/Uuid'
+    started_at:
+      $ref: './common.yaml#/Timestamp'
+
+MatrixJobCompletedPayload:
+  type: object
+  required:
+    - job_id
+    - matrix_id
+    - run_id
+    - status
+    - duration_ms
+    - completed_at
+  properties:
+    job_id:
+      $ref: './common.yaml#/Uuid'
+    matrix_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    combination:
+      type: object
+      additionalProperties: true
+    index:
+      type: integer
+    status:
+      $ref: './common.yaml#/Status'
+    exit_code:
+      type: integer
+    duration_ms:
+      type: integer
+    completed_at:
+      $ref: './common.yaml#/Timestamp'
+
+MatrixCompletedPayload:
+  type: object
+  required:
+    - matrix_id
+    - run_id
+    - status
+    - completed_at
+  properties:
+    matrix_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    status:
+      $ref: './common.yaml#/Status'
+    jobs_succeeded:
+      type: integer
+    jobs_failed:
+      type: integer
+    jobs_cancelled:
+      type: integer
+    jobs_skipped:
+      type: integer
+    total_duration_ms:
+      type: integer
+      description: Wall-clock time for entire matrix
+    cumulative_duration_ms:
+      type: integer
+      description: Sum of all job durations (for billing)
+    failed_combinations:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+      description: Combinations that failed
+    completed_at:
+      $ref: './common.yaml#/Timestamp'
+
+MatrixCancelledPayload:
+  type: object
+  required:
+    - matrix_id
+    - run_id
+    - reason
+    - cancelled_at
+  properties:
+    matrix_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    reason:
+      type: string
+      enum:
+        - fail_fast
+        - user_requested
+        - timeout
+        - license_suspended
+    failed_job_id:
+      $ref: './common.yaml#/Uuid'
+      description: Job that triggered fail_fast
+    jobs_cancelled:
+      type: integer
+    jobs_completed:
+      type: integer
+    cancelled_at:
+      $ref: './common.yaml#/Timestamp'

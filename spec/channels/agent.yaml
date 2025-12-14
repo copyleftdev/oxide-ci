@@ -1,0 +1,25 @@
+# Agent Pool Channels
+
+registered:
+  address: agent.registered
+  description: Emitted when a new agent joins the pool
+  messages:
+    agentRegistered:
+      $ref: '../messages/agent.yaml#/AgentRegistered'
+
+heartbeat:
+  address: agent.{agent_id}.heartbeat
+  description: Periodic health check from agent
+  parameters:
+    agent_id:
+      description: The agent identifier
+  messages:
+    agentHeartbeat:
+      $ref: '../messages/agent.yaml#/AgentHeartbeat'
+
+disconnected:
+  address: agent.disconnected
+  description: Emitted when an agent leaves the pool
+  messages:
+    agentDisconnected:
+      $ref: '../messages/agent.yaml#/AgentDisconnected'

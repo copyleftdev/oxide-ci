@@ -1,0 +1,109 @@
+# Webhook Schemas
+
+GitHubPushPayload:
+  type: object
+  required:
+    - ref
+    - after
+    - repository
+  properties:
+    ref:
+      type: string
+      examples:
+        - "refs/heads/main"
+    before:
+      type: string
+      description: SHA before push
+    after:
+      type: string
+      description: SHA after push
+    repository:
+      $ref: '#/GitHubRepository'
+    pusher:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+    commits:
+      type: array
+      items:
+        $ref: '#/GitHubCommit'
+
+GitHubPullRequestPayload:
+  type: object
+  required:
+    - action
+    - number
+    - pull_request
+  properties:
+    action:
+      type: string
+      enum:
+        - opened
+        - closed
+        - synchronize
+        - reopened
+        - edited
+    number:
+      type: integer
+    pull_request:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        state:
+          type: string
+        head:
+          type: object
+          properties:
+            ref:
+              type: string
+            sha:
+              type: string
+        base:
+          type: object
+          properties:
+            ref:
+              type: string
+            sha:
+              type: string
+    repository:
+      $ref: '#/GitHubRepository'
+
+GitHubRepository:
+  type: object
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+    full_name:
+      type: string
+    private:
+      type: boolean
+    clone_url:
+      type: string
+    default_branch:
+      type: string
+
+GitHubCommit:
+  type: object
+  properties:
+    id:
+      type: string
+    message:
+      type: string
+    author:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+    timestamp:
+      type: string
+      format: date-time

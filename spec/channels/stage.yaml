@@ -1,0 +1,25 @@
+# Stage Lifecycle Channels
+
+started:
+  address: run.{run_id}.stage.{stage_name}.started
+  description: Emitted when a stage begins execution
+  parameters:
+    run_id:
+      description: The run identifier
+    stage_name:
+      description: The stage name
+  messages:
+    stageStarted:
+      $ref: '../messages/stage.yaml#/StageStarted'
+
+completed:
+  address: run.{run_id}.stage.{stage_name}.completed
+  description: Emitted when a stage finishes
+  parameters:
+    run_id:
+      description: The run identifier
+    stage_name:
+      description: The stage name
+  messages:
+    stageCompleted:
+      $ref: '../messages/stage.yaml#/StageCompleted'

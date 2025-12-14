@@ -1,0 +1,117 @@
+# Run Schemas
+
+RunQueuedPayload:
+  type: object
+  required:
+    - run_id
+    - pipeline_id
+    - pipeline_name
+    - run_number
+    - trigger
+    - queued_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_name:
+      type: string
+    run_number:
+      type: integer
+    trigger:
+      $ref: './common.yaml#/TriggerType'
+    git_ref:
+      type: string
+      examples:
+        - "refs/heads/main"
+    git_sha:
+      type: string
+      examples:
+        - "a1b2c3d4e5f6"
+    queued_at:
+      $ref: './common.yaml#/Timestamp'
+    queued_by:
+      type: string
+      description: User or system that triggered the run
+    license_id:
+      type: string
+      description: Keygen license ID for metered billing
+
+RunStartedPayload:
+  type: object
+  required:
+    - run_id
+    - pipeline_id
+    - agent_id
+    - started_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_name:
+      type: string
+    run_number:
+      type: integer
+    agent_id:
+      $ref: './common.yaml#/Uuid'
+    agent_name:
+      type: string
+    started_at:
+      $ref: './common.yaml#/Timestamp'
+
+RunCompletedPayload:
+  type: object
+  required:
+    - run_id
+    - pipeline_id
+    - status
+    - duration_ms
+    - completed_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_name:
+      type: string
+    run_number:
+      type: integer
+    status:
+      $ref: './common.yaml#/Status'
+    duration_ms:
+      type: integer
+      description: Total run duration in milliseconds
+    stages_passed:
+      type: integer
+    stages_failed:
+      type: integer
+    completed_at:
+      $ref: './common.yaml#/Timestamp'
+    billable_minutes:
+      type: number
+      description: Minutes to bill via Stripe metered billing
+
+RunCancelledPayload:
+  type: object
+  required:
+    - run_id
+    - pipeline_id
+    - cancelled_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    cancelled_by:
+      type: string
+      description: User or system that cancelled
+    reason:
+      type: string
+      enum:
+        - user_requested
+        - timeout
+        - license_suspended
+        - quota_exceeded
+    cancelled_at:
+      $ref: './common.yaml#/Timestamp'

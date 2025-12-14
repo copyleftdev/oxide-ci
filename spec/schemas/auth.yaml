@@ -1,0 +1,239 @@
+# Authentication Schemas
+# OIDC token exchange and identity federation
+
+OIDCTokenRequest:
+  type: object
+  required:
+    - audience
+  properties:
+    audience:
+      type: string
+      description: Token audience (cloud provider identifier)
+      examples:
+        - "sts.amazonaws.com"
+        - "https://iam.googleapis.com"
+        - "api://AzureADTokenExchange"
+    claims:
+      $ref: '#/OIDCClaims'
+
+OIDCClaims:
+  type: object
+  description: Claims included in the OIDC token
+  properties:
+    iss:
+      type: string
+      description: Issuer (Oxide CI)
+      examples:
+        - "https://token.oxideci.io"
+    sub:
+      type: string
+      description: Subject (unique run identifier)
+      examples:
+        - "repo:acme/app:ref:refs/heads/main:run:12345"
+    aud:
+      type: string
+      description: Audience
+    exp:
+      type: integer
+      description: Expiration time (Unix timestamp)
+    iat:
+      type: integer
+      description: Issued at (Unix timestamp)
+    nbf:
+      type: integer
+      description: Not before (Unix timestamp)
+    jti:
+      type: string
+      description: JWT ID (unique token identifier)
+    repository:
+      type: string
+      description: Repository full name
+      examples:
+        - "acme/my-app"
+    repository_id:
+      type: string
+    repository_owner:
+      type: string
+    ref:
+      type: string
+      description: Git ref
+      examples:
+        - "refs/heads/main"
+    ref_type:
+      type: string
+      enum:
+        - branch
+        - tag
+    sha:
+      type: string
+      description: Git commit SHA
+    run_id:
+      type: string
+    run_number:
+      type: integer
+    pipeline_id:
+      type: string
+    pipeline_name:
+      type: string
+    actor:
+      type: string
+      description: User who triggered the run
+    event_name:
+      type: string
+      description: Trigger event type
+    environment:
+      type: string
+      description: Deployment environment name
+
+OIDCTokenResponse:
+  type: object
+  required:
+    - token
+    - expires_at
+  properties:
+    token:
+      type: string
+      description: JWT token
+    token_type:
+      type: string
+      default: "Bearer"
+    expires_at:
+      $ref: './common.yaml#/Timestamp'
+    expires_in:
+      type: integer
+      description: Seconds until expiration
+
+AWSCredentials:
+  type: object
+  required:
+    - access_key_id
+    - secret_access_key
+    - session_token
+  properties:
+    access_key_id:
+      type: string
+    secret_access_key:
+      type: string
+    session_token:
+      type: string
+    expiration:
+      $ref: './common.yaml#/Timestamp'
+    region:
+      type: string
+
+GCPCredentials:
+  type: object
+  required:
+    - access_token
+  properties:
+    access_token:
+      type: string
+    token_type:
+      type: string
+      default: "Bearer"
+    expires_in:
+      type: integer
+    project_id:
+      type: string
+
+AzureCredentials:
+  type: object
+  required:
+    - access_token
+  properties:
+    access_token:
+      type: string
+    token_type:
+      type: string
+      default: "Bearer"
+    expires_on:
+      type: integer
+      description: Unix timestamp
+    subscription_id:
+      type: string
+    tenant_id:
+      type: string
+
+IdentityProviderConfig:
+  type: object
+  required:
+    - provider
+  properties:
+    provider:
+      type: string
+      enum:
+        - aws
+        - gcp
+        - azure
+        - custom
+    aws:
+      $ref: '#/AWSIdentityConfig'
+    gcp:
+      $ref: '#/GCPIdentityConfig'
+    azure:
+      $ref: '#/AzureIdentityConfig'
+
+AWSIdentityConfig:
+  type: object
+  required:
+    - role_arn
+  properties:
+    role_arn:
+      type: string
+      description: IAM role ARN to assume
+      examples:
+        - "arn:aws:iam::123456789012:role/OxideCIRole"
+    session_name:
+      type: string
+      default: "oxide-ci"
+    duration_seconds:
+      type: integer
+      minimum: 900
+      maximum: 43200
+      default: 3600
+    external_id:
+      type: string
+      description: External ID for role assumption
+    policy:
+      type: string
+      description: Session policy JSON to further restrict permissions
+
+GCPIdentityConfig:
+  type: object
+  required:
+    - workload_identity_provider
+    - service_account_email
+  properties:
+    workload_identity_provider:
+      type: string
+      description: Workload Identity Provider resource name
+      examples:
+        - "projects/123456/locations/global/workloadIdentityPools/oxide-ci/providers/oxide"
+    service_account_email:
+      type: string
+      description: Service account to impersonate
+      examples:
+        - "oxide-ci@my-project.iam.gserviceaccount.com"
+    token_lifetime:
+      type: string
+      default: "3600s"
+
+AzureIdentityConfig:
+  type: object
+  required:
+    - client_id
+    - tenant_id
+    - subscription_id
+  properties:
+    client_id:
+      type: string
+      description: Azure AD application (client) ID
+    tenant_id:
+      type: string
+      description: Azure AD tenant ID
+    subscription_id:
+      type: string
+      description: Azure subscription ID
+    use_federated_credential:
+      type: boolean
+      default: true

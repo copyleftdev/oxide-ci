@@ -1,0 +1,107 @@
+# Message Index
+
+# Run Messages
+RunQueued:
+  $ref: './run.yaml#/RunQueued'
+RunStarted:
+  $ref: './run.yaml#/RunStarted'
+RunCompleted:
+  $ref: './run.yaml#/RunCompleted'
+RunCancelled:
+  $ref: './run.yaml#/RunCancelled'
+
+# Stage Messages
+StageStarted:
+  $ref: './stage.yaml#/StageStarted'
+StageCompleted:
+  $ref: './stage.yaml#/StageCompleted'
+
+# Step Messages
+StepStarted:
+  $ref: './step.yaml#/StepStarted'
+StepOutput:
+  $ref: './step.yaml#/StepOutput'
+StepCompleted:
+  $ref: './step.yaml#/StepCompleted'
+
+# Agent Messages
+AgentRegistered:
+  $ref: './agent.yaml#/AgentRegistered'
+AgentHeartbeat:
+  $ref: './agent.yaml#/AgentHeartbeat'
+AgentDisconnected:
+  $ref: './agent.yaml#/AgentDisconnected'
+
+# Webhook Messages
+GitHubPush:
+  $ref: './webhook.yaml#/GitHubPush'
+GitHubPullRequest:
+  $ref: './webhook.yaml#/GitHubPullRequest'
+
+# Artifact Messages
+ArtifactUploaded:
+  $ref: './artifact.yaml#/ArtifactUploaded'
+
+# Licensing Messages (Keygen)
+LicenseValidated:
+  $ref: './licensing.yaml#/LicenseValidated'
+LicenseExpired:
+  $ref: './licensing.yaml#/LicenseExpired'
+LicenseSuspended:
+  $ref: './licensing.yaml#/LicenseSuspended'
+
+# Billing Messages (Stripe)
+SubscriptionCreated:
+  $ref: './billing.yaml#/SubscriptionCreated'
+SubscriptionUpdated:
+  $ref: './billing.yaml#/SubscriptionUpdated'
+SubscriptionCancelled:
+  $ref: './billing.yaml#/SubscriptionCancelled'
+PaymentSucceeded:
+  $ref: './billing.yaml#/PaymentSucceeded'
+PaymentFailed:
+  $ref: './billing.yaml#/PaymentFailed'
+
+# Cache Messages
+CacheHit:
+  $ref: './cache.yaml#/CacheHit'
+CacheMiss:
+  $ref: './cache.yaml#/CacheMiss'
+CacheUploaded:
+  $ref: './cache.yaml#/CacheUploaded'
+CacheEvicted:
+  $ref: './cache.yaml#/CacheEvicted'
+
+# Secret Messages
+SecretAccessed:
+  $ref: './secrets.yaml#/SecretAccessed'
+SecretRotated:
+  $ref: './secrets.yaml#/SecretRotated'
+
+# Matrix Messages
+MatrixExpanded:
+  $ref: './matrix.yaml#/MatrixExpanded'
+MatrixJobStarted:
+  $ref: './matrix.yaml#/MatrixJobStarted'
+MatrixJobCompleted:
+  $ref: './matrix.yaml#/MatrixJobCompleted'
+MatrixCompleted:
+  $ref: './matrix.yaml#/MatrixCompleted'
+MatrixCancelled:
+  $ref: './matrix.yaml#/MatrixCancelled'
+
+# Approval Messages
+ApprovalRequested:
+  $ref: './approval.yaml#/ApprovalRequested'
+ApprovalGranted:
+  $ref: './approval.yaml#/ApprovalGranted'
+ApprovalRejected:
+  $ref: './approval.yaml#/ApprovalRejected'
+ApprovalExpired:
+  $ref: './approval.yaml#/ApprovalExpired'
+
+# Notification Messages
+NotificationSent:
+  $ref: './notification.yaml#/NotificationSent'
+NotificationFailed:
+  $ref: './notification.yaml#/NotificationFailed'

@@ -1,0 +1,331 @@
+# Pipeline Definition Schemas
+# Defines the structure of user-authored pipeline YAML files
+
+PipelineDefinition:
+  type: object
+  required:
+    - version
+    - name
+    - stages
+  properties:
+    version:
+      type: string
+      enum: ["1"]
+      description: Pipeline schema version
+    name:
+      type: string
+      description: Human-readable pipeline name
+      examples:
+        - "Build and Deploy"
+    description:
+      type: string
+    triggers:
+      type: array
+      items:
+        $ref: '#/TriggerConfig'
+    variables:
+      type: object
+      additionalProperties:
+        type: string
+      description: Pipeline-level environment variables
+    stages:
+      type: array
+      items:
+        $ref: '#/StageDefinition'
+      minItems: 1
+    cache:
+      $ref: '#/CacheConfig'
+    artifacts:
+      $ref: '#/ArtifactConfig'
+    timeout_minutes:
+      type: integer
+      default: 60
+      description: Maximum pipeline execution time
+    concurrency:
+      $ref: '#/ConcurrencyConfig'
+
+TriggerConfig:
+  type: object
+  required:
+    - type
+  properties:
+    type:
+      $ref: './common.yaml#/TriggerType'
+    branches:
+      type: array
+      items:
+        type: string
+      description: Branch patterns to match
+      examples:
+        - ["main", "release/*"]
+    paths:
+      type: array
+      items:
+        type: string
+      description: Path patterns that trigger the pipeline
+      examples:
+        - ["src/**", "!src/**/*.md"]
+    paths_ignore:
+      type: array
+      items:
+        type: string
+      description: Path patterns to exclude
+    tags:
+      type: array
+      items:
+        type: string
+      description: Tag patterns to match
+    cron:
+      type: string
+      description: Cron expression for scheduled triggers
+      examples:
+        - "0 2 * * *"
+    timezone:
+      type: string
+      description: Timezone for cron triggers
+      examples:
+        - "America/New_York"
+
+StageDefinition:
+  type: object
+  required:
+    - name
+    - steps
+  properties:
+    name:
+      type: string
+      description: Unique stage identifier
+    display_name:
+      type: string
+      description: Human-readable stage name
+    depends_on:
+      type: array
+      items:
+        type: string
+      description: Stage names this stage depends on (DAG edges)
+    condition:
+      $ref: '#/ConditionExpression'
+    environment:
+      $ref: './environment.yaml#/ExecutionEnvironment'
+    variables:
+      type: object
+      additionalProperties:
+        type: string
+    steps:
+      type: array
+      items:
+        $ref: '#/StepDefinition'
+      minItems: 1
+    parallel:
+      type: boolean
+      default: false
+      description: Run steps in parallel within this stage
+    timeout_minutes:
+      type: integer
+    retry:
+      $ref: '#/RetryConfig'
+    agent:
+      $ref: '#/AgentSelector'
+
+StepDefinition:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      description: Step identifier
+    display_name:
+      type: string
+    plugin:
+      type: string
+      description: WASM plugin to execute
+      examples:
+        - "oxide/checkout@v1"
+        - "oxide/docker-build@v2"
+    run:
+      type: string
+      description: Shell command to execute (mutually exclusive with plugin)
+    shell:
+      type: string
+      enum:
+        - bash
+        - sh
+        - powershell
+        - pwsh
+        - python
+      default: bash
+    working_directory:
+      type: string
+    environment:
+      $ref: './environment.yaml#/ExecutionEnvironment'
+    variables:
+      type: object
+      additionalProperties:
+        type: string
+    secrets:
+      type: array
+      items:
+        $ref: './secrets.yaml#/SecretReference'
+    condition:
+      $ref: '#/ConditionExpression'
+    timeout_minutes:
+      type: integer
+      default: 30
+    retry:
+      $ref: '#/RetryConfig'
+    continue_on_error:
+      type: boolean
+      default: false
+    outputs:
+      type: array
+      items:
+        type: string
+      description: Output variables to expose to subsequent steps
+
+ConditionExpression:
+  type: object
+  properties:
+    if:
+      type: string
+      description: Expression that evaluates to boolean
+      examples:
+        - "branch == 'main'"
+        - "event == 'pull_request'"
+        - "previous.status == 'success'"
+    unless:
+      type: string
+      description: Inverse condition expression
+
+RetryConfig:
+  type: object
+  properties:
+    max_attempts:
+      type: integer
+      minimum: 1
+      maximum: 10
+      default: 1
+    delay_seconds:
+      type: integer
+      default: 10
+    exponential_backoff:
+      type: boolean
+      default: true
+    retry_on:
+      type: array
+      items:
+        type: string
+        enum:
+          - failure
+          - timeout
+          - cancelled
+      default: ["failure"]
+
+ConcurrencyConfig:
+  type: object
+  properties:
+    group:
+      type: string
+      description: Concurrency group identifier
+      examples:
+        - "deploy-${{ branch }}"
+    cancel_in_progress:
+      type: boolean
+      default: false
+      description: Cancel running pipelines in same group
+
+AgentSelector:
+  type: object
+  properties:
+    labels:
+      type: array
+      items:
+        type: string
+      description: Required agent labels
+      examples:
+        - ["linux", "docker", "large"]
+    name:
+      type: string
+      description: Specific agent name
+
+CacheConfig:
+  type: object
+  properties:
+    paths:
+      type: array
+      items:
+        type: string
+      description: Paths to cache
+      examples:
+        - ["node_modules", ".npm", "~/.cargo/registry"]
+    key:
+      type: string
+      description: Cache key template
+      examples:
+        - "npm-${{ hashFiles('package-lock.json') }}"
+    restore_keys:
+      type: array
+      items:
+        type: string
+      description: Fallback cache keys
+    ttl_days:
+      type: integer
+      default: 7
+
+ArtifactConfig:
+  type: object
+  properties:
+    paths:
+      type: array
+      items:
+        type: string
+      description: Paths to upload as artifacts
+    name:
+      type: string
+      description: Artifact name
+    retention_days:
+      type: integer
+      default: 30
+    compression:
+      type: string
+      enum:
+        - gzip
+        - zstd
+        - none
+      default: zstd
+
+MatrixConfig:
+  type: object
+  properties:
+    dimensions:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+      description: Matrix dimensions and values
+      examples:
+        - os: ["linux", "macos", "windows"]
+          node: ["18", "20", "22"]
+    include:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+      description: Additional combinations to include
+    exclude:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+      description: Combinations to exclude
+    fail_fast:
+      type: boolean
+      default: true
+      description: Cancel other matrix jobs on first failure
+    max_parallel:
+      type: integer
+      description: Maximum parallel matrix jobs

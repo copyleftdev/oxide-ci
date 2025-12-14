@@ -1,0 +1,11 @@
+# Artifact Channels
+
+uploaded:
+  address: artifact.{run_id}.uploaded
+  description: Emitted when an artifact is uploaded
+  parameters:
+    run_id:
+      description: The run identifier
+  messages:
+    artifactUploaded:
+      $ref: '../messages/artifact.yaml#/ArtifactUploaded'

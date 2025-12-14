@@ -1,0 +1,29 @@
+# Cache Messages
+
+CacheHit:
+  name: CacheHit
+  title: Cache Hit Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/cache.yaml#/CacheHitPayload'
+
+CacheMiss:
+  name: CacheMiss
+  title: Cache Miss Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/cache.yaml#/CacheMissPayload'
+
+CacheUploaded:
+  name: CacheUploaded
+  title: Cache Uploaded Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/cache.yaml#/CacheUploadedPayload'
+
+CacheEvicted:
+  name: CacheEvicted
+  title: Cache Evicted Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/cache.yaml#/CacheEvictedPayload'

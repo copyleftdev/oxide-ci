@@ -1,0 +1,10 @@
+# Webhook Channels
+
+github:
+  address: webhook.github
+  description: Incoming GitHub webhook events
+  messages:
+    githubPush:
+      $ref: '../messages/webhook.yaml#/GitHubPush'
+    githubPullRequest:
+      $ref: '../messages/webhook.yaml#/GitHubPullRequest'

@@ -1,0 +1,21 @@
+# Notification Channels
+
+sent:
+  address: notification.sent.{channel_id}
+  description: Emitted when a notification is delivered
+  parameters:
+    channel_id:
+      description: Notification channel identifier
+  messages:
+    notificationSent:
+      $ref: '../messages/notification.yaml#/NotificationSent'
+
+failed:
+  address: notification.failed.{channel_id}
+  description: Emitted when notification delivery fails
+  parameters:
+    channel_id:
+      description: Notification channel identifier
+  messages:
+    notificationFailed:
+      $ref: '../messages/notification.yaml#/NotificationFailed'

@@ -1,0 +1,41 @@
+# Billing Messages (Stripe Integration)
+
+SubscriptionCreated:
+  name: SubscriptionCreated
+  title: Subscription Created Event
+  description: Emitted when a new Stripe subscription is created
+  contentType: application/json
+  payload:
+    $ref: '../schemas/billing.yaml#/SubscriptionPayload'
+
+SubscriptionUpdated:
+  name: SubscriptionUpdated
+  title: Subscription Updated Event
+  description: Emitted when a subscription is modified (plan change, quantity, etc.)
+  contentType: application/json
+  payload:
+    $ref: '../schemas/billing.yaml#/SubscriptionPayload'
+
+SubscriptionCancelled:
+  name: SubscriptionCancelled
+  title: Subscription Cancelled Event
+  description: Emitted when a subscription is cancelled
+  contentType: application/json
+  payload:
+    $ref: '../schemas/billing.yaml#/SubscriptionCancelledPayload'
+
+PaymentSucceeded:
+  name: PaymentSucceeded
+  title: Payment Succeeded Event
+  description: Emitted when a payment is successfully processed
+  contentType: application/json
+  payload:
+    $ref: '../schemas/billing.yaml#/PaymentPayload'
+
+PaymentFailed:
+  name: PaymentFailed
+  title: Payment Failed Event
+  description: Emitted when a payment fails
+  contentType: application/json
+  payload:
+    $ref: '../schemas/billing.yaml#/PaymentFailedPayload'

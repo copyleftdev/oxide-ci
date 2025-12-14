@@ -1,0 +1,38 @@
+# Cache Channels
+
+hit:
+  address: cache.hit.{run_id}
+  description: Emitted when a cache entry is restored
+  parameters:
+    run_id:
+      description: Run identifier
+  messages:
+    cacheHit:
+      $ref: '../messages/cache.yaml#/CacheHit'
+
+miss:
+  address: cache.miss.{run_id}
+  description: Emitted when a cache lookup fails
+  parameters:
+    run_id:
+      description: Run identifier
+  messages:
+    cacheMiss:
+      $ref: '../messages/cache.yaml#/CacheMiss'
+
+uploaded:
+  address: cache.uploaded.{run_id}
+  description: Emitted when a cache entry is stored
+  parameters:
+    run_id:
+      description: Run identifier
+  messages:
+    cacheUploaded:
+      $ref: '../messages/cache.yaml#/CacheUploaded'
+
+evicted:
+  address: cache.evicted
+  description: Emitted when a cache entry is removed
+  messages:
+    cacheEvicted:
+      $ref: '../messages/cache.yaml#/CacheEvicted'

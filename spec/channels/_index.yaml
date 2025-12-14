@@ -1,0 +1,106 @@
+# Channel Index - Modular channel definitions
+# Each channel is defined in its own file for maintainability
+
+# Run Lifecycle
+run/queued:
+  $ref: './run.yaml#/queued'
+run/started:
+  $ref: './run.yaml#/started'
+run/completed:
+  $ref: './run.yaml#/completed'
+run/cancelled:
+  $ref: './run.yaml#/cancelled'
+
+# Stage Lifecycle
+stage/started:
+  $ref: './stage.yaml#/started'
+stage/completed:
+  $ref: './stage.yaml#/completed'
+
+# Step Lifecycle
+step/started:
+  $ref: './step.yaml#/started'
+step/output:
+  $ref: './step.yaml#/output'
+step/completed:
+  $ref: './step.yaml#/completed'
+
+# Agent Pool
+agent/registered:
+  $ref: './agent.yaml#/registered'
+agent/heartbeat:
+  $ref: './agent.yaml#/heartbeat'
+agent/disconnected:
+  $ref: './agent.yaml#/disconnected'
+
+# Webhooks
+webhook/github:
+  $ref: './webhook.yaml#/github'
+
+# Artifacts
+artifact/uploaded:
+  $ref: './artifact.yaml#/uploaded'
+
+# Licensing (Keygen)
+license/validated:
+  $ref: './licensing.yaml#/validated'
+license/expired:
+  $ref: './licensing.yaml#/expired'
+license/suspended:
+  $ref: './licensing.yaml#/suspended'
+
+# Billing (Stripe)
+billing/subscription-created:
+  $ref: './billing.yaml#/subscription-created'
+billing/subscription-updated:
+  $ref: './billing.yaml#/subscription-updated'
+billing/subscription-cancelled:
+  $ref: './billing.yaml#/subscription-cancelled'
+billing/payment-succeeded:
+  $ref: './billing.yaml#/payment-succeeded'
+billing/payment-failed:
+  $ref: './billing.yaml#/payment-failed'
+
+# Cache
+cache/hit:
+  $ref: './cache.yaml#/hit'
+cache/miss:
+  $ref: './cache.yaml#/miss'
+cache/uploaded:
+  $ref: './cache.yaml#/uploaded'
+cache/evicted:
+  $ref: './cache.yaml#/evicted'
+
+# Secrets
+secret/accessed:
+  $ref: './secrets.yaml#/accessed'
+secret/rotated:
+  $ref: './secrets.yaml#/rotated'
+
+# Matrix Builds
+matrix/expanded:
+  $ref: './matrix.yaml#/expanded'
+matrix/job-started:
+  $ref: './matrix.yaml#/job-started'
+matrix/job-completed:
+  $ref: './matrix.yaml#/job-completed'
+matrix/completed:
+  $ref: './matrix.yaml#/completed'
+matrix/cancelled:
+  $ref: './matrix.yaml#/cancelled'
+
+# Approval Gates
+approval/requested:
+  $ref: './approval.yaml#/requested'
+approval/granted:
+  $ref: './approval.yaml#/granted'
+approval/rejected:
+  $ref: './approval.yaml#/rejected'
+approval/expired:
+  $ref: './approval.yaml#/expired'
+
+# Notifications
+notification/sent:
+  $ref: './notification.yaml#/sent'
+notification/failed:
+  $ref: './notification.yaml#/failed'

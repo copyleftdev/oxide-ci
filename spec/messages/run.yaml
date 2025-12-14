@@ -1,0 +1,29 @@
+# Run Lifecycle Messages
+
+RunQueued:
+  name: RunQueued
+  title: Run Queued Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/run.yaml#/RunQueuedPayload'
+
+RunStarted:
+  name: RunStarted
+  title: Run Started Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/run.yaml#/RunStartedPayload'
+
+RunCompleted:
+  name: RunCompleted
+  title: Run Completed Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/run.yaml#/RunCompletedPayload'
+
+RunCancelled:
+  name: RunCancelled
+  title: Run Cancelled Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/run.yaml#/RunCancelledPayload'

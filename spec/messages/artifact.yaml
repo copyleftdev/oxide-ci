@@ -1,0 +1,8 @@
+# Artifact Messages
+
+ArtifactUploaded:
+  name: ArtifactUploaded
+  title: Artifact Uploaded Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/artifact.yaml#/ArtifactUploadedPayload'

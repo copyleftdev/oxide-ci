@@ -1,0 +1,31 @@
+# Licensing Channels (Keygen Integration)
+
+validated:
+  address: license.validated.{license_id}
+  description: Emitted when a license is successfully validated
+  parameters:
+    license_id:
+      description: The Keygen license identifier
+  messages:
+    licenseValidated:
+      $ref: '../messages/licensing.yaml#/LicenseValidated'
+
+expired:
+  address: license.expired.{license_id}
+  description: Emitted when a license expires
+  parameters:
+    license_id:
+      description: The Keygen license identifier
+  messages:
+    licenseExpired:
+      $ref: '../messages/licensing.yaml#/LicenseExpired'
+
+suspended:
+  address: license.suspended.{license_id}
+  description: Emitted when a license is suspended (payment failed, policy violation)
+  parameters:
+    license_id:
+      description: The Keygen license identifier
+  messages:
+    licenseSuspended:
+      $ref: '../messages/licensing.yaml#/LicenseSuspended'

@@ -1,0 +1,316 @@
+# Notification Schemas
+# Defines notification channels and delivery events
+
+NotificationChannel:
+  type: object
+  required:
+    - id
+    - type
+    - name
+  properties:
+    id:
+      $ref: './common.yaml#/Uuid'
+    type:
+      type: string
+      enum:
+        - slack
+        - discord
+        - teams
+        - email
+        - webhook
+        - pagerduty
+        - opsgenie
+    name:
+      type: string
+      description: Human-readable channel name
+    enabled:
+      type: boolean
+      default: true
+    config:
+      oneOf:
+        - $ref: '#/SlackConfig'
+        - $ref: '#/DiscordConfig'
+        - $ref: '#/TeamsConfig'
+        - $ref: '#/EmailConfig'
+        - $ref: '#/WebhookConfig'
+        - $ref: '#/PagerDutyConfig'
+        - $ref: '#/OpsGenieConfig'
+    triggers:
+      type: array
+      items:
+        $ref: '#/NotificationTrigger'
+    filters:
+      $ref: '#/NotificationFilter'
+
+SlackConfig:
+  type: object
+  required:
+    - webhook_url
+  properties:
+    webhook_url:
+      type: string
+      format: uri
+    channel:
+      type: string
+      description: Override channel (optional)
+    username:
+      type: string
+      default: "Oxide CI"
+    icon_emoji:
+      type: string
+      default: ":rocket:"
+    thread_replies:
+      type: boolean
+      default: false
+      description: Reply in thread for updates
+
+DiscordConfig:
+  type: object
+  required:
+    - webhook_url
+  properties:
+    webhook_url:
+      type: string
+      format: uri
+    username:
+      type: string
+      default: "Oxide CI"
+    avatar_url:
+      type: string
+      format: uri
+
+TeamsConfig:
+  type: object
+  required:
+    - webhook_url
+  properties:
+    webhook_url:
+      type: string
+      format: uri
+    card_style:
+      type: string
+      enum:
+        - compact
+        - detailed
+      default: compact
+
+EmailConfig:
+  type: object
+  required:
+    - recipients
+  properties:
+    recipients:
+      type: array
+      items:
+        type: string
+        format: email
+    cc:
+      type: array
+      items:
+        type: string
+        format: email
+    reply_to:
+      type: string
+      format: email
+    subject_prefix:
+      type: string
+      default: "[Oxide CI]"
+
+WebhookConfig:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      format: uri
+    method:
+      type: string
+      enum:
+        - POST
+        - PUT
+      default: POST
+    headers:
+      type: object
+      additionalProperties:
+        type: string
+    auth:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - bearer
+            - basic
+            - hmac
+        token_secret:
+          type: string
+          description: Secret name containing auth token
+    retry_count:
+      type: integer
+      default: 3
+    timeout_seconds:
+      type: integer
+      default: 30
+
+PagerDutyConfig:
+  type: object
+  required:
+    - routing_key
+  properties:
+    routing_key:
+      type: string
+      description: PagerDuty Events API routing key
+    severity:
+      type: string
+      enum:
+        - critical
+        - error
+        - warning
+        - info
+      default: error
+    dedupe_key_template:
+      type: string
+      description: Template for deduplication
+      examples:
+        - "pipeline-{{ pipeline_id }}-{{ run_id }}"
+
+OpsGenieConfig:
+  type: object
+  required:
+    - api_key
+  properties:
+    api_key:
+      type: string
+    region:
+      type: string
+      enum:
+        - us
+        - eu
+      default: us
+    priority:
+      type: string
+      enum:
+        - P1
+        - P2
+        - P3
+        - P4
+        - P5
+      default: P3
+    tags:
+      type: array
+      items:
+        type: string
+
+NotificationTrigger:
+  type: string
+  enum:
+    - run.queued
+    - run.started
+    - run.completed
+    - run.failed
+    - run.cancelled
+    - run.timeout
+    - stage.failed
+    - step.failed
+    - approval.requested
+    - approval.granted
+    - approval.rejected
+    - approval.expired
+    - license.suspended
+    - payment.failed
+
+NotificationFilter:
+  type: object
+  properties:
+    pipelines:
+      type: array
+      items:
+        type: string
+      description: Pipeline names to notify on
+    branches:
+      type: array
+      items:
+        type: string
+      description: Branch patterns to match
+    environments:
+      type: array
+      items:
+        type: string
+    statuses:
+      type: array
+      items:
+        $ref: './common.yaml#/Status'
+    only_on_status_change:
+      type: boolean
+      default: false
+      description: Only notify if status differs from previous run
+
+NotificationSentPayload:
+  type: object
+  required:
+    - notification_id
+    - channel_id
+    - channel_type
+    - trigger
+    - sent_at
+  properties:
+    notification_id:
+      $ref: './common.yaml#/Uuid'
+    channel_id:
+      $ref: './common.yaml#/Uuid'
+    channel_type:
+      type: string
+    channel_name:
+      type: string
+    trigger:
+      type: string
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_name:
+      type: string
+    status:
+      $ref: './common.yaml#/Status'
+    delivery_status:
+      type: string
+      enum:
+        - delivered
+        - failed
+        - pending
+    error_message:
+      type: string
+    sent_at:
+      $ref: './common.yaml#/Timestamp'
+
+NotificationFailedPayload:
+  type: object
+  required:
+    - notification_id
+    - channel_id
+    - error
+    - failed_at
+  properties:
+    notification_id:
+      $ref: './common.yaml#/Uuid'
+    channel_id:
+      $ref: './common.yaml#/Uuid'
+    channel_type:
+      type: string
+    trigger:
+      type: string
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    error:
+      type: string
+    error_code:
+      type: string
+    retry_count:
+      type: integer
+    will_retry:
+      type: boolean
+    next_retry_at:
+      $ref: './common.yaml#/Timestamp'
+    failed_at:
+      $ref: './common.yaml#/Timestamp'

@@ -1,0 +1,80 @@
+# Example Firecracker MicroVM Pipeline
+# Demonstrates isolated VM execution for security-sensitive workloads
+
+version: "1"
+name: Secure Build Pipeline
+
+triggers:
+  - type: push
+    branches:
+      - main
+
+stages:
+  - name: build-in-microvm
+    display_name: "Isolated Build"
+    environment:
+      type: firecracker
+      firecracker:
+        kernel: "oxide/kernel:5.10"
+        rootfs: "oxide/ubuntu:22.04"
+        vcpu_count: 4
+        memory_mb: 8192
+        disk_size_gb: 20
+        network: true
+        boot_timeout_seconds: 30
+    
+    agent:
+      labels:
+        - firecracker
+        - large
+    
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: build
+        run: |
+          apt-get update && apt-get install -y build-essential
+          make release
+        timeout_minutes: 30
+      
+      - name: sign
+        plugin: "oxide/cosign@v1"
+        secrets:
+          - name: COSIGN_PRIVATE_KEY
+            source:
+              provider: vault
+              path: "secret/data/signing/cosign"
+            key: private_key
+        variables:
+          artifact: "./dist/oxide"
+      
+      - name: upload
+        plugin: "oxide/upload-artifact@v1"
+        variables:
+          name: "oxide-signed"
+          path: "./dist/oxide*"
+
+  - name: sbom
+    display_name: "Generate SBOM"
+    depends_on:
+      - build-in-microvm
+    environment:
+      type: container
+      container:
+        image: "anchore/syft:latest"
+    steps:
+      - name: download
+        plugin: "oxide/download-artifact@v1"
+        variables:
+          name: "oxide-signed"
+          path: "./dist"
+      
+      - name: generate-sbom
+        run: syft ./dist/oxide -o spdx-json > sbom.json
+      
+      - name: upload-sbom
+        plugin: "oxide/upload-artifact@v1"
+        variables:
+          name: "sbom"
+          path: "sbom.json"

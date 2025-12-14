@@ -1,0 +1,29 @@
+# Approval Gate Messages
+
+ApprovalRequested:
+  name: ApprovalRequested
+  title: Approval Requested Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/approval.yaml#/ApprovalRequestedPayload'
+
+ApprovalGranted:
+  name: ApprovalGranted
+  title: Approval Granted Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/approval.yaml#/ApprovalGrantedPayload'
+
+ApprovalRejected:
+  name: ApprovalRejected
+  title: Approval Rejected Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/approval.yaml#/ApprovalRejectedPayload'
+
+ApprovalExpired:
+  name: ApprovalExpired
+  title: Approval Expired Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/approval.yaml#/ApprovalExpiredPayload'

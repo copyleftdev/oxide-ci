@@ -1,0 +1,125 @@
+# Example Nix-based Pipeline
+# Demonstrates reproducible builds with Nix flakes
+
+version: "1"
+name: Reproducible Nix Build
+
+triggers:
+  - type: push
+    branches:
+      - main
+  - type: pull_request
+
+stages:
+  - name: check
+    display_name: "Nix Flake Check"
+    environment:
+      type: nix
+      nix:
+        flake: ".#devShell"
+        pure: true
+        sandbox: true
+        substituters:
+          - "https://cache.nixos.org"
+          - "https://nix.oxideci.io"
+    
+    agent:
+      labels:
+        - nix
+    
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: flake-check
+        run: nix flake check
+      
+      - name: format-check
+        run: |
+          nix fmt -- --check .
+          nixpkgs-fmt --check .
+
+  - name: build
+    display_name: "Build with Nix"
+    depends_on:
+      - check
+    environment:
+      type: nix
+      nix:
+        flake: ".#default"
+        pure: true
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: build
+        run: |
+          nix build .#default
+          cp -L result/bin/oxide ./oxide
+      
+      - name: test
+        run: nix build .#checks.x86_64-linux.default
+      
+      - name: upload
+        plugin: "oxide/upload-artifact@v1"
+        variables:
+          name: "oxide-nix"
+          path: "./oxide"
+
+  - name: docker
+    display_name: "Build Docker Image"
+    depends_on:
+      - build
+    environment:
+      type: nix
+      nix:
+        packages:
+          - docker
+          - skopeo
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: build-image
+        run: |
+          nix build .#dockerImage
+          docker load < result
+      
+      - name: push
+        run: |
+          skopeo copy \
+            docker-daemon:oxide:latest \
+            docker://ghcr.io/oxide-ci/oxide:${{ sha }}
+        secrets:
+          - name: REGISTRY_AUTH
+            source:
+              provider: oxide
+              path: "ghcr/push-token"
+        condition:
+          if: "branch == 'main'"
+
+  - name: cache-push
+    display_name: "Push to Binary Cache"
+    depends_on:
+      - build
+    condition:
+      if: "branch == 'main'"
+    environment:
+      type: nix
+      nix:
+        packages:
+          - cachix
+    steps:
+      - name: checkout
+        plugin: "oxide/checkout@v1"
+      
+      - name: push-cache
+        run: |
+          nix build .#default --json | \
+            jq -r '.[].outputs.out' | \
+            cachix push oxide-ci
+        secrets:
+          - name: CACHIX_AUTH_TOKEN
+            source:
+              provider: oxide
+              path: "cachix/auth-token"

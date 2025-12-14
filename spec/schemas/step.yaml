@@ -1,0 +1,80 @@
+# Step Schemas
+
+StepStartedPayload:
+  type: object
+  required:
+    - run_id
+    - stage_name
+    - step_id
+    - step_name
+    - started_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    step_id:
+      type: string
+    step_name:
+      type: string
+    plugin:
+      type: string
+      description: Plugin used for this step
+    started_at:
+      $ref: './common.yaml#/Timestamp'
+
+StepOutputPayload:
+  type: object
+  required:
+    - run_id
+    - step_id
+    - stream
+    - line
+    - timestamp
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    step_id:
+      type: string
+    stream:
+      type: string
+      enum:
+        - stdout
+        - stderr
+    line:
+      type: string
+      description: Log line content
+    line_number:
+      type: integer
+    timestamp:
+      $ref: './common.yaml#/Timestamp'
+
+StepCompletedPayload:
+  type: object
+  required:
+    - run_id
+    - stage_name
+    - step_id
+    - status
+    - exit_code
+    - duration_ms
+    - completed_at
+  properties:
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    stage_name:
+      type: string
+    step_id:
+      type: string
+    step_name:
+      type: string
+    plugin:
+      type: string
+    status:
+      $ref: './common.yaml#/StepStatus'
+    exit_code:
+      type: integer
+    duration_ms:
+      type: integer
+    completed_at:
+      $ref: './common.yaml#/Timestamp'

@@ -1,0 +1,15 @@
+# Notification Messages
+
+NotificationSent:
+  name: NotificationSent
+  title: Notification Sent Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/notification.yaml#/NotificationSentPayload'
+
+NotificationFailed:
+  name: NotificationFailed
+  title: Notification Failed Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/notification.yaml#/NotificationFailedPayload'
