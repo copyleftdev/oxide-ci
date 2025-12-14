@@ -1,9 +1,8 @@
 //! PostgreSQL database layer for Oxide CI.
 
-pub mod migrations;
 pub mod repositories;
 
-pub use repositories::*;
+pub use repositories::{PgAgentRepository, PgPipelineRepository, PgRunRepository};
 
 use oxide_core::Result;
 use sqlx::PgPool;
