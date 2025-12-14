@@ -2,8 +2,8 @@
 
 use crate::schema::{AsyncApiSchema, SchemaRegistry};
 use crate::{SpecLinked, SpecValidationError, SpecValidationResult};
-use schemars::schema_for;
 use schemars::JsonSchema;
+use schemars::schema_for;
 use serde::Serialize;
 use std::collections::HashSet;
 
@@ -22,12 +22,12 @@ impl SpecValidator {
             spec_dir: spec_dir.to_string(),
         })
     }
-    
+
     /// Validate a type against its linked schema.
     pub fn validate<T: SpecLinked + JsonSchema>(&self) -> SpecValidationResult {
         let schema_name = T::SCHEMA_NAME;
         let spec_file = T::SPEC_FILE;
-        
+
         let mut result = SpecValidationResult {
             type_name: std::any::type_name::<T>().to_string(),
             schema_name: schema_name.to_string(),
@@ -36,7 +36,7 @@ impl SpecValidator {
             errors: vec![],
             warnings: vec![],
         };
-        
+
         // Get the AsyncAPI schema
         let Some(async_schema) = self.registry.get(schema_name) else {
             result.is_valid = false;
@@ -48,22 +48,19 @@ impl SpecValidator {
             });
             return result;
         };
-        
+
         // Generate JSON Schema from Rust type
         let rust_schema = schema_for!(T);
-        
+
         // Compare schemas
         self.compare_schemas(&rust_schema.schema, async_schema, "", &mut result);
-        
+
         result.is_valid = result.errors.is_empty();
         result
     }
-    
+
     /// Validate that a value serializes correctly according to the spec.
-    pub fn validate_value<T: SpecLinked + Serialize>(
-        &self,
-        value: &T,
-    ) -> SpecValidationResult {
+    pub fn validate_value<T: SpecLinked + Serialize>(&self, value: &T) -> SpecValidationResult {
         let mut result = SpecValidationResult {
             type_name: std::any::type_name::<T>().to_string(),
             schema_name: T::SCHEMA_NAME.to_string(),
@@ -72,7 +69,7 @@ impl SpecValidator {
             errors: vec![],
             warnings: vec![],
         };
-        
+
         // Serialize the value
         let json = match serde_json::to_value(value) {
             Ok(j) => j,
@@ -87,7 +84,7 @@ impl SpecValidator {
                 return result;
             }
         };
-        
+
         // Get the AsyncAPI schema
         let Some(async_schema) = self.registry.get(T::SCHEMA_NAME) else {
             result.is_valid = false;
@@ -99,14 +96,14 @@ impl SpecValidator {
             });
             return result;
         };
-        
+
         // Validate the JSON against the schema
         self.validate_json_against_schema(&json, async_schema, "", &mut result);
-        
+
         result.is_valid = result.errors.is_empty();
         result
     }
-    
+
     fn compare_schemas(
         &self,
         rust_schema: &schemars::schema::Schema,
@@ -115,19 +112,20 @@ impl SpecValidator {
         result: &mut SpecValidationResult,
     ) {
         use schemars::schema::Schema;
-        
+
         let Schema::Object(rust_obj) = rust_schema else {
             return;
         };
-        
+
         // Compare types
         if let Some(async_type) = &async_schema.schema_type {
-            let rust_type = rust_obj.instance_type.as_ref()
-                .and_then(|t| match t {
-                    schemars::schema::SingleOrVec::Single(s) => Some(format!("{:?}", s).to_lowercase()),
-                    schemars::schema::SingleOrVec::Vec(v) => v.first().map(|s| format!("{:?}", s).to_lowercase()),
-                });
-            
+            let rust_type = rust_obj.instance_type.as_ref().and_then(|t| match t {
+                schemars::schema::SingleOrVec::Single(s) => Some(format!("{:?}", s).to_lowercase()),
+                schemars::schema::SingleOrVec::Vec(v) => {
+                    v.first().map(|s| format!("{:?}", s).to_lowercase())
+                }
+            });
+
             if let Some(rt) = rust_type {
                 if &rt != async_type && !(rt == "integer" && async_type == "number") {
                     result.warnings.push(format!(
@@ -137,14 +135,14 @@ impl SpecValidator {
                 }
             }
         }
-        
+
         // Compare properties for objects
-        if let (Some(async_props), Some(rust_obj_validation)) = 
-            (&async_schema.properties, &rust_obj.object) 
+        if let (Some(async_props), Some(rust_obj_validation)) =
+            (&async_schema.properties, &rust_obj.object)
         {
             let rust_props: HashSet<_> = rust_obj_validation.properties.keys().collect();
             let async_prop_names: HashSet<_> = async_props.keys().collect();
-            
+
             // Check for missing properties in Rust
             for prop in async_prop_names.difference(&rust_props) {
                 if async_schema.is_required(prop) {
@@ -161,7 +159,7 @@ impl SpecValidator {
                     ));
                 }
             }
-            
+
             // Check for extra properties in Rust
             for prop in rust_props.difference(&async_prop_names) {
                 result.warnings.push(format!(
@@ -171,7 +169,7 @@ impl SpecValidator {
             }
         }
     }
-    
+
     fn validate_json_against_schema(
         &self,
         json: &serde_json::Value,
@@ -180,7 +178,7 @@ impl SpecValidator {
         result: &mut SpecValidationResult,
     ) {
         use serde_json::Value;
-        
+
         // Check type
         if let Some(expected_type) = &schema.schema_type {
             let actual_type = match json {
@@ -192,10 +190,10 @@ impl SpecValidator {
                 Value::Array(_) => "array",
                 Value::Object(_) => "object",
             };
-            
+
             // Allow integer where number is expected
-            if actual_type != expected_type && 
-               !(actual_type == "integer" && expected_type == "number") 
+            if actual_type != expected_type
+                && !(actual_type == "integer" && expected_type == "number")
             {
                 result.errors.push(SpecValidationError {
                     path: path.to_string(),
@@ -205,7 +203,7 @@ impl SpecValidator {
                 });
             }
         }
-        
+
         // Check required properties for objects
         if let Value::Object(obj) = json {
             if let Some(required) = &schema.required {
@@ -220,7 +218,7 @@ impl SpecValidator {
                     }
                 }
             }
-            
+
             // Recursively validate properties
             if let Some(props) = &schema.properties {
                 for (key, value) in obj {
@@ -235,7 +233,7 @@ impl SpecValidator {
                 }
             }
         }
-        
+
         // Check enum values
         if let Some(enum_values) = &schema.enum_values {
             if !enum_values.contains(json) {
@@ -265,7 +263,7 @@ macro_rules! validate_all {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_validator_creation() {
         // This would need the spec directory to exist

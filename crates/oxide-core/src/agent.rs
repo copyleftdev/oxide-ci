@@ -2,9 +2,10 @@
 
 use crate::ids::{AgentId, RunId};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Agent {
     pub id: AgentId,
     pub name: String,
@@ -21,7 +22,7 @@ pub struct Agent {
     pub last_heartbeat_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Os {
     Linux,
@@ -29,14 +30,14 @@ pub enum Os {
     Windows,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Arch {
     X86_64,
     Aarch64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Capability {
     Docker,
@@ -45,7 +46,7 @@ pub enum Capability {
     Nix,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentStatus {
     Idle,
@@ -60,17 +61,17 @@ impl AgentStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SystemMetrics {
     pub cpu_percent: f64,
     pub memory_used_bytes: u64,
     pub memory_total_bytes: u64,
     pub disk_used_bytes: u64,
     pub disk_total_bytes: u64,
-    pub load_average: [f64; 3],
+    pub load_average: (f64, f64, f64),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgentRegistration {
     pub name: String,
     pub labels: Vec<String>,
@@ -81,7 +82,7 @@ pub struct AgentRegistration {
     pub max_concurrent_jobs: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DisconnectReason {
     Graceful,

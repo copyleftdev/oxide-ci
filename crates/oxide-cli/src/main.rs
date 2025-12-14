@@ -17,9 +17,9 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     let cli = Cli::parse();
-    
+
     // TODO: Implement command dispatch
     println!("Oxide CI v{}", env!("CARGO_PKG_VERSION"));
-    
+
     Ok(())
 }

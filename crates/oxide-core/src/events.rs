@@ -6,11 +6,12 @@ use crate::ids::*;
 use crate::pipeline::TriggerType;
 use crate::run::{CancelReasonType, LogStream, RunStatus, StageStatus, StepStatus};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// All events in the Oxide CI system.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Event {
     // Run lifecycle
@@ -95,7 +96,9 @@ impl Event {
             Event::SecretAccessed(p) => format!("secret.accessed.{}", p.secret_id),
             Event::SecretRotated(p) => format!("secret.rotated.{}", p.secret_id),
             Event::MatrixExpanded(p) => format!("matrix.expanded.{}", p.run_id),
-            Event::MatrixJobStarted(p) => format!("matrix.{}.job.{}.started", p.matrix_id, p.job_id),
+            Event::MatrixJobStarted(p) => {
+                format!("matrix.{}.job.{}.started", p.matrix_id, p.job_id)
+            }
             Event::MatrixJobCompleted(p) => {
                 format!("matrix.{}.job.{}.completed", p.matrix_id, p.job_id)
             }
@@ -120,7 +123,7 @@ impl Event {
 
 // === Run Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RunQueuedPayload {
     pub run_id: RunId,
     pub pipeline_id: PipelineId,
@@ -134,7 +137,7 @@ pub struct RunQueuedPayload {
     pub license_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RunStartedPayload {
     pub run_id: RunId,
     pub pipeline_id: PipelineId,
@@ -145,7 +148,7 @@ pub struct RunStartedPayload {
     pub started_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RunCompletedPayload {
     pub run_id: RunId,
     pub pipeline_id: PipelineId,
@@ -159,7 +162,7 @@ pub struct RunCompletedPayload {
     pub billable_minutes: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RunCancelledPayload {
     pub run_id: RunId,
     pub pipeline_id: PipelineId,
@@ -170,7 +173,7 @@ pub struct RunCancelledPayload {
 
 // === Stage Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StageStartedPayload {
     pub run_id: RunId,
     pub stage_name: String,
@@ -179,7 +182,7 @@ pub struct StageStartedPayload {
     pub started_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StageCompletedPayload {
     pub run_id: RunId,
     pub stage_name: String,
@@ -193,7 +196,7 @@ pub struct StageCompletedPayload {
 
 // === Step Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StepStartedPayload {
     pub run_id: RunId,
     pub stage_name: String,
@@ -203,7 +206,7 @@ pub struct StepStartedPayload {
     pub started_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StepOutputPayload {
     pub run_id: RunId,
     pub step_id: String,
@@ -213,7 +216,7 @@ pub struct StepOutputPayload {
     pub timestamp: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StepCompletedPayload {
     pub run_id: RunId,
     pub stage_name: String,
@@ -228,7 +231,7 @@ pub struct StepCompletedPayload {
 
 // === Agent Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgentRegisteredPayload {
     pub agent_id: AgentId,
     pub name: String,
@@ -237,7 +240,7 @@ pub struct AgentRegisteredPayload {
     pub registered_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgentHeartbeatPayload {
     pub agent_id: AgentId,
     pub status: AgentStatus,
@@ -246,7 +249,7 @@ pub struct AgentHeartbeatPayload {
     pub timestamp: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgentDisconnectedPayload {
     pub agent_id: AgentId,
     pub reason: DisconnectReason,
@@ -256,7 +259,7 @@ pub struct AgentDisconnectedPayload {
 
 // === Cache Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheHitPayload {
     pub run_id: RunId,
     pub step_id: Option<String>,
@@ -268,7 +271,7 @@ pub struct CacheHitPayload {
     pub restored_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheMissPayload {
     pub run_id: RunId,
     pub step_id: Option<String>,
@@ -278,7 +281,7 @@ pub struct CacheMissPayload {
     pub missed_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheUploadedPayload {
     pub run_id: RunId,
     pub step_id: Option<String>,
@@ -292,7 +295,7 @@ pub struct CacheUploadedPayload {
     pub expires_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheEvictedPayload {
     pub cache_id: CacheEntryId,
     pub cache_key: String,
@@ -304,7 +307,7 @@ pub struct CacheEvictedPayload {
 
 // === Secret Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretAccessedPayload {
     pub secret_id: SecretId,
     pub secret_name: String,
@@ -315,7 +318,7 @@ pub struct SecretAccessedPayload {
     pub accessed_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretRotatedPayload {
     pub secret_id: SecretId,
     pub secret_name: String,
@@ -327,7 +330,7 @@ pub struct SecretRotatedPayload {
 
 // === Matrix Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MatrixExpandedPayload {
     pub run_id: RunId,
     pub matrix_id: MatrixId,
@@ -340,7 +343,7 @@ pub struct MatrixExpandedPayload {
     pub expanded_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MatrixJobStartedPayload {
     pub job_id: JobId,
     pub matrix_id: MatrixId,
@@ -352,7 +355,7 @@ pub struct MatrixJobStartedPayload {
     pub started_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MatrixJobCompletedPayload {
     pub job_id: JobId,
     pub matrix_id: MatrixId,
@@ -366,7 +369,7 @@ pub struct MatrixJobCompletedPayload {
     pub completed_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MatrixCompletedPayload {
     pub matrix_id: MatrixId,
     pub run_id: RunId,
@@ -383,7 +386,7 @@ pub struct MatrixCompletedPayload {
 
 // === Approval Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ApprovalRequestedPayload {
     pub gate_id: ApprovalGateId,
     pub run_id: RunId,
@@ -402,7 +405,7 @@ pub struct ApprovalRequestedPayload {
     pub requested_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ApprovalGrantedPayload {
     pub gate_id: ApprovalGateId,
     pub run_id: RunId,
@@ -418,7 +421,7 @@ pub struct ApprovalGrantedPayload {
     pub approved_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ApprovalRejectedPayload {
     pub gate_id: ApprovalGateId,
     pub run_id: RunId,
@@ -431,7 +434,7 @@ pub struct ApprovalRejectedPayload {
     pub rejected_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ApprovalExpiredPayload {
     pub gate_id: ApprovalGateId,
     pub run_id: RunId,
@@ -445,7 +448,7 @@ pub struct ApprovalExpiredPayload {
 
 // === Notification Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NotificationSentPayload {
     pub notification_id: NotificationChannelId,
     pub channel_id: NotificationChannelId,
@@ -459,7 +462,7 @@ pub struct NotificationSentPayload {
     pub sent_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NotificationFailedPayload {
     pub notification_id: NotificationChannelId,
     pub channel_id: NotificationChannelId,
@@ -476,7 +479,7 @@ pub struct NotificationFailedPayload {
 
 // === Licensing Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LicenseValidatedPayload {
     pub license_id: String,
     pub policy_name: String,
@@ -488,7 +491,7 @@ pub struct LicenseValidatedPayload {
     pub next_check_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LicenseUsage {
     pub agents_used: u32,
     pub agents_limit: u32,
@@ -496,7 +499,7 @@ pub struct LicenseUsage {
     pub runs_limit: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LicenseExpiredPayload {
     pub license_id: String,
     pub policy_name: Option<String>,
@@ -504,7 +507,7 @@ pub struct LicenseExpiredPayload {
     pub expired_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LicenseSuspendedPayload {
     pub license_id: String,
     pub reason: String,
@@ -515,7 +518,7 @@ pub struct LicenseSuspendedPayload {
 
 // === Billing Payloads ===
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SubscriptionCreatedPayload {
     pub subscription_id: String,
     pub customer_id: String,
@@ -528,7 +531,7 @@ pub struct SubscriptionCreatedPayload {
     pub timestamp: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PaymentSucceededPayload {
     pub payment_intent_id: String,
     pub invoice_id: Option<String>,
@@ -540,7 +543,7 @@ pub struct PaymentSucceededPayload {
     pub paid_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PaymentFailedPayload {
     pub payment_intent_id: String,
     pub invoice_id: Option<String>,

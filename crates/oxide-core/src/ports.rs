@@ -2,6 +2,7 @@
 //!
 //! These traits define the interfaces between the core domain and external adapters.
 
+use crate::Result;
 use crate::agent::Agent;
 use crate::cache::{CacheEntry, CacheRestoreRequest, CacheSaveRequest};
 use crate::events::Event;
@@ -9,10 +10,9 @@ use crate::ids::*;
 use crate::pipeline::{Pipeline, PipelineDefinition};
 use crate::run::Run;
 use crate::secrets::SecretValue;
-use crate::{Error, Result};
 use async_trait::async_trait;
-use std::pin::Pin;
 use futures::Stream;
+use std::pin::Pin;
 
 /// Stream of events.
 pub type EventStream = Pin<Box<dyn Stream<Item = Result<Event>> + Send>>;

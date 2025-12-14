@@ -2,9 +2,10 @@
 
 use crate::ids::{CacheEntryId, RunId, StepId};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheEntry {
     pub id: CacheEntryId,
     pub key: String,
@@ -20,7 +21,7 @@ pub struct CacheEntry {
     pub access_count: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Compression {
     Gzip,
@@ -29,7 +30,7 @@ pub enum Compression {
     None,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CacheScope {
     Pipeline,
@@ -37,7 +38,7 @@ pub enum CacheScope {
     Organization,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheRestoreRequest {
     pub run_id: RunId,
     pub step_id: StepId,
@@ -46,7 +47,7 @@ pub struct CacheRestoreRequest {
     pub paths: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheSaveRequest {
     pub run_id: RunId,
     pub step_id: StepId,
@@ -55,7 +56,7 @@ pub struct CacheSaveRequest {
     pub ttl_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CacheEvictionReason {
     Expired,

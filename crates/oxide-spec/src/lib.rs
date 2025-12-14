@@ -32,10 +32,10 @@ pub use validation::*;
 pub trait SpecLinked {
     /// The schema name in the AsyncAPI spec.
     const SCHEMA_NAME: &'static str;
-    
+
     /// The file path relative to spec/ directory.
     const SPEC_FILE: &'static str;
-    
+
     /// Optional: line number in the spec file.
     const SPEC_LINE: Option<u32> = None;
 }

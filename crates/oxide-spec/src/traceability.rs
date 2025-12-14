@@ -8,19 +8,19 @@ use std::collections::HashMap;
 pub struct TraceEntry {
     /// Rust type name (fully qualified).
     pub rust_type: String,
-    
+
     /// AsyncAPI schema name.
     pub schema_name: String,
-    
+
     /// Spec file path.
     pub spec_file: String,
-    
+
     /// Optional line number in spec.
     pub spec_line: Option<u32>,
-    
+
     /// Source file where the Rust type is defined.
     pub source_file: Option<String>,
-    
+
     /// Source line where the Rust type is defined.
     pub source_line: Option<u32>,
 }
@@ -38,7 +38,7 @@ impl TraceabilityMatrix {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Register a type with its spec link.
     pub fn register<T: SpecLinked>(&mut self) {
         let entry = TraceEntry {
@@ -49,28 +49,30 @@ impl TraceabilityMatrix {
             source_file: None,
             source_line: None,
         };
-        
+
         let idx = self.entries.len();
         self.by_schema.insert(entry.schema_name.clone(), idx);
         self.by_type.insert(entry.rust_type.clone(), idx);
         self.entries.push(entry);
     }
-    
+
     /// Get all entries.
     pub fn entries(&self) -> &[TraceEntry] {
         &self.entries
     }
-    
+
     /// Find entry by schema name.
     pub fn by_schema(&self, schema_name: &str) -> Option<&TraceEntry> {
-        self.by_schema.get(schema_name).map(|&idx| &self.entries[idx])
+        self.by_schema
+            .get(schema_name)
+            .map(|&idx| &self.entries[idx])
     }
-    
+
     /// Find entry by Rust type name.
     pub fn by_type(&self, type_name: &str) -> Option<&TraceEntry> {
         self.by_type.get(type_name).map(|&idx| &self.entries[idx])
     }
-    
+
     /// Get schemas without Rust implementations.
     pub fn unimplemented_schemas<'a>(&'a self, all_schemas: &'a [String]) -> Vec<&'a str> {
         all_schemas
@@ -79,25 +81,29 @@ impl TraceabilityMatrix {
             .map(|s| s.as_str())
             .collect()
     }
-    
+
     /// Generate a markdown report.
     pub fn to_markdown(&self) -> String {
         let mut md = String::new();
-        
+
         md.push_str("# Spec-Code Traceability Matrix\n\n");
         md.push_str("| Schema | Rust Type | Spec File | Line |\n");
         md.push_str("|--------|-----------|-----------|------|\n");
-        
+
         for entry in &self.entries {
             md.push_str(&format!(
                 "| `{}` | `{}` | `{}` | {} |\n",
                 entry.schema_name,
-                entry.rust_type.split("::").last().unwrap_or(&entry.rust_type),
+                entry
+                    .rust_type
+                    .split("::")
+                    .last()
+                    .unwrap_or(&entry.rust_type),
                 entry.spec_file,
                 entry.spec_line.map(|l| l.to_string()).unwrap_or_default(),
             ));
         }
-        
+
         md
     }
 }

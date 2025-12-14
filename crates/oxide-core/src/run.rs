@@ -3,10 +3,11 @@
 use crate::ids::{AgentId, PipelineId, RunId, StageId, StepId};
 use crate::pipeline::TriggerType;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Run {
     pub id: RunId,
     pub pipeline_id: PipelineId,
@@ -25,7 +26,7 @@ pub struct Run {
     pub billable_minutes: Option<f64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RunStatus {
     Queued,
@@ -54,14 +55,14 @@ impl RunStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TriggerInfo {
     pub trigger_type: TriggerType,
     pub triggered_by: Option<String>,
     pub source: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Stage {
     pub id: StageId,
     pub name: String,
@@ -75,7 +76,7 @@ pub struct Stage {
     pub duration_ms: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum StageStatus {
     Pending,
@@ -99,7 +100,7 @@ impl StageStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Step {
     pub id: StepId,
     pub name: String,
@@ -113,7 +114,7 @@ pub struct Step {
     pub duration_ms: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum StepStatus {
     Pending,
@@ -128,15 +129,12 @@ impl StepStatus {
     pub fn is_terminal(&self) -> bool {
         matches!(
             self,
-            StepStatus::Success
-                | StepStatus::Failure
-                | StepStatus::Cancelled
-                | StepStatus::Skipped
+            StepStatus::Success | StepStatus::Failure | StepStatus::Cancelled | StepStatus::Skipped
         )
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StepLog {
     pub step_id: StepId,
     pub stream: LogStream,
@@ -145,21 +143,21 @@ pub struct StepLog {
     pub timestamp: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum LogStream {
     Stdout,
     Stderr,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CancelReason {
     pub reason: CancelReasonType,
     pub cancelled_by: Option<String>,
     pub message: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CancelReasonType {
     UserRequested,

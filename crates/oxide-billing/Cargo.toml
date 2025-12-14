@@ -9,4 +9,4 @@ oxide-core = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
-stripe-rust = "26"
+async-stripe = "0.34"

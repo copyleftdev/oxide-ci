@@ -39,27 +39,26 @@ pub struct AsyncApiSchema {
 impl AsyncApiSchema {
     /// Load a schema from a YAML file.
     pub fn from_yaml_file(path: &str) -> Result<HashMap<String, Self>, SchemaError> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| SchemaError::IoError(e.to_string()))?;
-        
-        serde_yaml::from_str(&content)
-            .map_err(|e| SchemaError::ParseError(e.to_string()))
+        let content =
+            std::fs::read_to_string(path).map_err(|e| SchemaError::IoError(e.to_string()))?;
+
+        serde_yaml::from_str(&content).map_err(|e| SchemaError::ParseError(e.to_string()))
     }
-    
+
     /// Load a schema from a YAML string.
     pub fn from_yaml_str(content: &str) -> Result<HashMap<String, Self>, SchemaError> {
-        serde_yaml::from_str(content)
-            .map_err(|e| SchemaError::ParseError(e.to_string()))
+        serde_yaml::from_str(content).map_err(|e| SchemaError::ParseError(e.to_string()))
     }
-    
+
     /// Get the effective type of this schema.
     pub fn effective_type(&self) -> Option<&str> {
         self.schema_type.as_deref()
     }
-    
+
     /// Check if a field is required.
     pub fn is_required(&self, field: &str) -> bool {
-        self.required.as_ref()
+        self.required
+            .as_ref()
             .map(|r| r.iter().any(|f| f == field))
             .unwrap_or(false)
     }
@@ -70,13 +69,13 @@ impl AsyncApiSchema {
 pub enum SchemaError {
     #[error("IO error: {0}")]
     IoError(String),
-    
+
     #[error("Parse error: {0}")]
     ParseError(String),
-    
+
     #[error("Schema not found: {0}")]
     NotFound(String),
-    
+
     #[error("Invalid reference: {0}")]
     InvalidReference(String),
 }
@@ -92,13 +91,13 @@ impl SchemaRegistry {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Load all schemas from the spec directory.
     pub fn load_from_spec_dir(spec_dir: &str) -> Result<Self, SchemaError> {
         let mut registry = Self::new();
-        
+
         let schemas_dir = format!("{}/schemas", spec_dir);
-        
+
         // Load all YAML files in the schemas directory
         if let Ok(entries) = std::fs::read_dir(&schemas_dir) {
             for entry in entries.flatten() {
@@ -109,11 +108,10 @@ impl SchemaRegistry {
                         if filename.starts_with('_') {
                             continue;
                         }
-                        
-                        let schemas = AsyncApiSchema::from_yaml_file(
-                            path.to_str().unwrap_or_default()
-                        )?;
-                        
+
+                        let schemas =
+                            AsyncApiSchema::from_yaml_file(path.to_str().unwrap_or_default())?;
+
                         for (name, schema) in schemas {
                             registry.schemas.insert(name, schema);
                         }
@@ -121,25 +119,25 @@ impl SchemaRegistry {
                 }
             }
         }
-        
+
         Ok(registry)
     }
-    
+
     /// Get a schema by name.
     pub fn get(&self, name: &str) -> Option<&AsyncApiSchema> {
         self.schemas.get(name)
     }
-    
+
     /// List all schema names.
     pub fn names(&self) -> impl Iterator<Item = &str> {
         self.schemas.keys().map(|s| s.as_str())
     }
-    
+
     /// Get the number of loaded schemas.
     pub fn len(&self) -> usize {
         self.schemas.len()
     }
-    
+
     /// Check if the registry is empty.
     pub fn is_empty(&self) -> bool {
         self.schemas.is_empty()

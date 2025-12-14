@@ -6,8 +6,8 @@ pub mod repositories;
 pub use repositories::*;
 
 use oxide_core::Result;
-use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
 
 /// Database connection pool.

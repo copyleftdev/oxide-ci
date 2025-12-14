@@ -2,9 +2,10 @@
 
 use crate::ids::SecretId;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Secret {
     pub id: SecretId,
     pub name: String,
@@ -19,7 +20,7 @@ pub struct Secret {
     pub version: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SecretScope {
     Organization,
@@ -28,7 +29,7 @@ pub enum SecretScope {
     Environment,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SecretProvider {
     Oxide,
@@ -62,7 +63,7 @@ impl SecretValue {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VaultConfig {
     pub address: String,
     pub namespace: Option<String>,
@@ -71,7 +72,7 @@ pub struct VaultConfig {
     pub mount_path: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum VaultAuthMethod {
     Jwt,
@@ -80,20 +81,20 @@ pub enum VaultAuthMethod {
     Token,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AwsSecretsConfig {
     pub region: String,
     pub role_arn: Option<String>,
     pub use_oidc: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GcpSecretsConfig {
     pub project_id: String,
     pub use_workload_identity: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AzureKeyVaultConfig {
     pub vault_url: String,
     pub tenant_id: Option<String>,

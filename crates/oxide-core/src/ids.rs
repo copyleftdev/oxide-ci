@@ -1,12 +1,13 @@
 //! Strongly-typed identifiers for domain entities.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
 macro_rules! define_id {
     ($name:ident, $prefix:expr) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
         #[serde(transparent)]
         pub struct $name(Uuid);
 
@@ -59,7 +60,7 @@ define_id!(MatrixId, "mtx");
 define_id!(JobId, "job");
 define_id!(LicenseId, "lic");
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(transparent)]
 pub struct StageId(String);
 
@@ -79,7 +80,7 @@ impl fmt::Display for StageId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(transparent)]
 pub struct StepId(String);
 

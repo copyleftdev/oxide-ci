@@ -2,7 +2,7 @@
 
 // TODO: Implement repositories
 // - PipelineRepository
-// - RunRepository  
+// - RunRepository
 // - AgentRepository
 // - SecretRepository
 // - CacheRepository

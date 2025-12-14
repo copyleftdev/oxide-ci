@@ -2,12 +2,13 @@
 //!
 //! These types represent the user-authored pipeline YAML configuration.
 
-use crate::ids::{PipelineId, StageId, StepId};
+use crate::ids::PipelineId;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PipelineDefinition {
     pub version: String,
     pub name: String,
@@ -32,7 +33,7 @@ fn default_timeout() -> u32 {
     60
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TriggerConfig {
     #[serde(rename = "type")]
     pub trigger_type: TriggerType,
@@ -50,7 +51,7 @@ pub struct TriggerConfig {
     pub timezone: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TriggerType {
     Push,
@@ -61,7 +62,7 @@ pub enum TriggerType {
     Webhook,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StageDefinition {
     pub name: String,
     #[serde(default)]
@@ -87,7 +88,7 @@ pub struct StageDefinition {
     pub matrix: Option<MatrixConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StepDefinition {
     pub name: String,
     #[serde(default)]
@@ -126,14 +127,14 @@ fn default_step_timeout() -> u32 {
     30
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConditionExpression {
     #[serde(rename = "if")]
     pub if_expr: Option<String>,
     pub unless: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEnvironment {
     #[serde(rename = "type", default = "default_env_type")]
     pub env_type: EnvironmentType,
@@ -149,7 +150,7 @@ fn default_env_type() -> EnvironmentType {
     EnvironmentType::Container
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EnvironmentType {
     Container,
@@ -158,7 +159,7 @@ pub enum EnvironmentType {
     Host,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContainerConfig {
     pub image: String,
     #[serde(default)]
@@ -187,7 +188,7 @@ fn default_network() -> String {
     "bridge".to_string()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RegistryAuth {
     pub url: Option<String>,
     pub username: Option<String>,
@@ -198,7 +199,7 @@ pub struct RegistryAuth {
     pub gcp_gcr: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VolumeMount {
     pub source: String,
     pub target: String,
@@ -212,7 +213,7 @@ fn default_volume_type() -> String {
     "bind".to_string()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceLimits {
     pub cpu: Option<String>,
     pub memory: Option<String>,
@@ -220,7 +221,7 @@ pub struct ResourceLimits {
     pub gpu: Option<GpuConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GpuConfig {
     #[serde(default)]
     pub count: u32,
@@ -228,7 +229,7 @@ pub struct GpuConfig {
     pub driver_version: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FirecrackerConfig {
     pub kernel: String,
     pub rootfs: String,
@@ -260,7 +261,7 @@ fn default_boot_timeout() -> u32 {
     30
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NixConfig {
     #[serde(default)]
     pub flake: Option<String>,
@@ -276,7 +277,7 @@ pub struct NixConfig {
     pub substituters: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretReference {
     pub name: String,
     pub source: SecretSource,
@@ -288,7 +289,7 @@ pub struct SecretReference {
     pub required: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretSource {
     pub provider: String,
     #[serde(default)]
@@ -297,7 +298,7 @@ pub struct SecretSource {
     pub version: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetryConfig {
     #[serde(default = "default_max_attempts")]
     pub max_attempts: u32,
@@ -316,14 +317,14 @@ fn default_delay() -> u32 {
     10
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConcurrencyConfig {
     pub group: String,
     #[serde(default)]
     pub cancel_in_progress: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgentSelector {
     #[serde(default)]
     pub labels: Vec<String>,
@@ -331,7 +332,7 @@ pub struct AgentSelector {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheConfig {
     #[serde(default)]
     pub paths: Vec<String>,
@@ -347,7 +348,7 @@ fn default_ttl() -> u32 {
     7
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ArtifactConfig {
     #[serde(default)]
     pub paths: Vec<String>,
@@ -366,7 +367,7 @@ fn default_compression() -> String {
     "zstd".to_string()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MatrixConfig {
     pub dimensions: HashMap<String, Vec<serde_json::Value>>,
     #[serde(default)]
@@ -379,7 +380,7 @@ pub struct MatrixConfig {
     pub max_parallel: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Pipeline {
     pub id: PipelineId,
     pub name: String,

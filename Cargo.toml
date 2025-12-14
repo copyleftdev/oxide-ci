@@ -48,7 +48,7 @@ oxide-cli = { path = "crates/oxide-cli" }
 oxide-spec = { path = "crates/oxide-spec" }
 
 # Schema generation
-schemars = "0.8"
+schemars = { version = "0.8", features = ["chrono", "uuid1"] }
 
 # Async runtime
 tokio = { version = "1.42", features = ["full"] }

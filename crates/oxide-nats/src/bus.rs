@@ -77,8 +77,8 @@ impl NatsEventBus {
 impl EventBus for NatsEventBus {
     async fn publish(&self, event: Event) -> Result<()> {
         let subject = event.subject();
-        let payload = serde_json::to_vec(&event)
-            .map_err(|e| Error::Serialization(e.to_string()))?;
+        let payload =
+            serde_json::to_vec(&event).map_err(|e| Error::Serialization(e.to_string()))?;
 
         debug!("Publishing event to {}", subject);
 
