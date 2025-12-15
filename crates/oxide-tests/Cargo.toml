@@ -1,0 +1,48 @@
+[package]
+name = "oxide-tests"
+version.workspace = true
+edition = "2024"
+description = "Integration test infrastructure for Oxide CI"
+publish = false
+
+[features]
+default = []
+integration = []
+
+[dependencies]
+# Internal crates
+oxide-core = { workspace = true }
+oxide-api = { workspace = true }
+oxide-db = { workspace = true }
+oxide-nats = { workspace = true }
+oxide-cache = { workspace = true }
+oxide-scheduler = { workspace = true }
+oxide-runner = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# HTTP
+axum = { workspace = true }
+reqwest = { workspace = true }
+tower = { workspace = true }
+
+# Testing
+testcontainers = { workspace = true }
+testcontainers-modules = { version = "0.11", features = ["postgres", "nats", "minio"] }
+tokio-test = { workspace = true }
+wiremock = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+once_cell = "1.19"
