@@ -1,0 +1,10 @@
+[book]
+title = "Oxide CI Documentation"
+authors = ["Oxide CI Team"]
+language = "en"
+
+[build]
+build-dir = "book"
+
+[output.html]
+git-repository-url = "https://github.com/copyleftdev/oxide-ci"
