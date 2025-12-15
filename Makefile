@@ -1,6 +1,6 @@
 # Oxide CI - AsyncAPI Development Commands
 
-.PHONY: lint validate bundle docs clean
+.PHONY: lint validate bundle docs clean setup check fmt test
 
 # Validate the AsyncAPI spec
 lint: validate
@@ -34,3 +34,24 @@ install:
 watch:
 	@echo "👀 Watching for changes..."
 	fswatch -o spec/ | xargs -n1 -I{} make validate
+
+# Setup pre-commit hooks
+setup:
+	@./scripts/setup-hooks.sh
+
+# Rust checks
+check:
+	cargo check --workspace
+
+fmt:
+	cargo fmt --all
+
+test:
+	cargo test --workspace --lib
+
+clippy:
+	cargo clippy --workspace --all-targets -- -D warnings
+
+# Run all pre-commit checks
+precommit:
+	pre-commit run --all-files
