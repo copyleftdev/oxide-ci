@@ -7,6 +7,9 @@ mod config;
 mod executor;
 mod handlers;
 
+#[cfg(test)]
+mod executor_tests;
+
 use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};
 use config::CliConfig;
 
