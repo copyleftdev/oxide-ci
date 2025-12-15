@@ -5,6 +5,7 @@
 //! used across all other crates.
 
 pub mod agent;
+pub mod approval;
 pub mod cache;
 pub mod error;
 pub mod events;

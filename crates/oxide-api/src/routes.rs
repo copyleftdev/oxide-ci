@@ -6,7 +6,7 @@ use axum::{
 };
 use std::sync::Arc;
 
-use crate::handlers::{agents, health, pipelines, runs};
+use crate::handlers::{agents, approvals, health, pipelines, runs};
 use crate::state::AppState;
 
 /// Create the main API router.
@@ -22,6 +22,15 @@ fn api_routes() -> Router<Arc<AppState>> {
     Router::new()
         .nest("/pipelines", pipeline_routes())
         .nest("/agents", agent_routes())
+        .nest("/approvals", approval_routes())
+}
+
+fn approval_routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(approvals::list_approvals))
+        .route("/{gate_id}", get(approvals::get_approval))
+        .route("/{gate_id}/respond", post(approvals::respond_to_approval))
+        .route("/{gate_id}/bypass", post(approvals::bypass_approval))
 }
 
 fn pipeline_routes() -> Router<Arc<AppState>> {
