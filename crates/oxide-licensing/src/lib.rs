@@ -2,5 +2,8 @@
 
 pub mod keygen;
 pub mod offline;
+pub mod types;
 
-// TODO: Implement Keygen client
+pub use keygen::{KeygenClient, KeygenConfig};
+pub use offline::{LicenseFile, OfflineValidator};
+pub use types::{Entitlement, License, LicenseStatus, MachineFingerprint, ValidationResult};
