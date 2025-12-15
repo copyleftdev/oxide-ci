@@ -12,6 +12,7 @@ use oxide_spec::{SpecLinked, SpecValidator};
 // (Cannot impl SpecLinked for external types due to orphan rules)
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct TestPayload {
     id: String,
     status: String,

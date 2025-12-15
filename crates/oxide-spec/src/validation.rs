@@ -266,6 +266,7 @@ macro_rules! validate_all {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

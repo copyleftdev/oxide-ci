@@ -9,4 +9,4 @@ oxide-core = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
-async-stripe = "0.34"
+async-stripe = { version = "0.34", features = ["runtime-tokio-hyper"] }

@@ -156,7 +156,8 @@ mod tests {
         use rand::rngs::OsRng;
 
         // Generate keypair
-        let signing_key = SigningKey::generate(&mut OsRng);
+        let mut csprng = OsRng;
+        let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key = signing_key.verifying_key();
 
         // Create license

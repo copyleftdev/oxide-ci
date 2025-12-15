@@ -154,7 +154,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_env_provider() {
-        std::env::set_var("TEST_SECRET_123", "secret_value");
+        // SAFETY: This test runs in isolation and doesn't rely on this env var elsewhere
+        unsafe { std::env::set_var("TEST_SECRET_123", "secret_value") };
         let provider = EnvProvider::default();
 
         let value = provider.get("TEST_SECRET_123").await.unwrap();
