@@ -1,10 +1,18 @@
 //! Schema parsing and representation.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 
-/// Parsed AsyncAPI schema.
+/// Represents additionalProperties which can be a boolean or a schema.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AdditionalProperties {
+    Bool(bool),
+    Schema(Box<AsyncApiSchema>),
+}
+
+/// Parsed AsyncAPI schema.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AsyncApiSchema {
     #[serde(rename = "type")]
     pub schema_type: Option<String>,
@@ -12,6 +20,7 @@ pub struct AsyncApiSchema {
     pub description: Option<String>,
     pub properties: Option<HashMap<String, AsyncApiSchema>>,
     pub required: Option<Vec<String>>,
+    #[serde(deserialize_with = "deserialize_items", default)]
     pub items: Option<Box<AsyncApiSchema>>,
     #[serde(rename = "enum")]
     pub enum_values: Option<Vec<serde_json::Value>>,
@@ -26,7 +35,7 @@ pub struct AsyncApiSchema {
     pub default: Option<serde_json::Value>,
     pub example: Option<serde_json::Value>,
     #[serde(rename = "additionalProperties")]
-    pub additional_properties: Option<Box<AsyncApiSchema>>,
+    pub additional_properties: Option<AdditionalProperties>,
     pub minimum: Option<f64>,
     pub maximum: Option<f64>,
     #[serde(rename = "minLength")]
@@ -34,6 +43,26 @@ pub struct AsyncApiSchema {
     #[serde(rename = "maxLength")]
     pub max_length: Option<u64>,
     pub pattern: Option<String>,
+}
+
+/// Custom deserializer for items that can be a single schema or array of schemas.
+fn deserialize_items<'de, D>(deserializer: D) -> Result<Option<Box<AsyncApiSchema>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ItemsValue {
+        Single(Box<AsyncApiSchema>),
+        Array(Vec<AsyncApiSchema>),
+    }
+
+    Option::<ItemsValue>::deserialize(deserializer).map(|opt| {
+        opt.map(|v| match v {
+            ItemsValue::Single(s) => s,
+            ItemsValue::Array(arr) => Box::new(arr.into_iter().next().unwrap_or_default()),
+        })
+    })
 }
 
 impl AsyncApiSchema {
