@@ -14,5 +14,11 @@ oxide-trace = { workspace = true }
 tokio = { workspace = true, features = ["process"] }
 async-trait = { workspace = true }
 tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+futures = { workspace = true }
 bollard = "0.18"
 async-stream = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"
