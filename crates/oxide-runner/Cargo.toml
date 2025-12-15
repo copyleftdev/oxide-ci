@@ -17,6 +17,7 @@ tracing = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 futures = { workspace = true }
+serde = { workspace = true }
 bollard = "0.18"
 async-stream = "0.3"
 
