@@ -1,0 +1,115 @@
+# Kubernetes Deployment Pipeline
+# Demonstrates: Helm, ArgoCD, multi-cluster, GitOps
+
+name: deploy-k8s
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main]
+      paths: ["src/**", "helm/**"]
+
+variables:
+  REGISTRY: ghcr.io/myorg
+  APP_NAME: myapp
+
+stages:
+  - name: build
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+
+      - name: docker-build
+        uses: docker-build@v1
+        with:
+          tags: |
+            ${{ REGISTRY }}/${{ APP_NAME }}:${{ sha }}
+            ${{ REGISTRY }}/${{ APP_NAME }}:latest
+
+      - name: docker-push
+        uses: docker-push@v1
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+  - name: helm-lint
+    needs: [build]
+    steps:
+      - name: lint
+        run: helm lint helm/myapp
+
+      - name: template
+        run: |
+          helm template myapp helm/myapp \
+            --set image.tag=${{ sha }} \
+            > rendered.yaml
+
+      - name: validate
+        run: kubectl apply --dry-run=client -f rendered.yaml
+
+  - name: deploy-dev
+    needs: [helm-lint]
+    steps:
+      - name: gcp-auth
+        uses: gcp-auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: get-credentials
+        run: |
+          gcloud container clusters get-credentials dev-cluster \
+            --region us-central1
+
+      - name: helm-upgrade
+        run: |
+          helm upgrade --install myapp helm/myapp \
+            --namespace myapp \
+            --set image.tag=${{ sha }} \
+            --set environment=development \
+            --wait --timeout 5m
+
+      - name: verify
+        run: |
+          kubectl rollout status deployment/myapp -n myapp
+          kubectl get pods -n myapp
+
+  - name: deploy-staging
+    needs: [deploy-dev]
+    steps:
+      - name: get-credentials
+        run: |
+          gcloud container clusters get-credentials staging-cluster \
+            --region us-central1
+
+      - name: helm-upgrade
+        run: |
+          helm upgrade --install myapp helm/myapp \
+            --namespace myapp \
+            --set image.tag=${{ sha }} \
+            --set environment=staging \
+            --set replicas=3 \
+            --wait
+
+  - name: deploy-production
+    needs: [deploy-staging]
+    approval:
+      required: true
+      approvers: [sre-team]
+    steps:
+      # GitOps approach - update manifest repo
+      - name: update-gitops
+        run: |
+          git clone https://github.com/myorg/gitops-config
+          cd gitops-config
+          yq -i '.spec.source.helm.parameters[0].value = "${{ sha }}"' apps/myapp/production.yaml
+          git commit -am "Deploy myapp ${{ sha }} to production"
+          git push
+
+      - name: wait-for-sync
+        uses: argocd-sync@v1
+        with:
+          app_name: myapp-production
+          wait: true
+          timeout: 600

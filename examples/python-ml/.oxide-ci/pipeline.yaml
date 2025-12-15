@@ -1,0 +1,117 @@
+# Python ML Pipeline
+# Demonstrates: Nix environment, GPU support, model artifacts
+
+name: python-ml
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main]
+      paths: ["src/**", "notebooks/**", "requirements.txt"]
+  - schedule:
+      cron: "0 2 * * 1"  # Weekly retraining
+
+environment:
+  type: nix
+  nix:
+    flake: ".#ml-devshell"
+    pure: true
+
+variables:
+  PYTHONPATH: src
+  WANDB_MODE: offline
+
+stages:
+  - name: setup
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+
+      - name: cache-pip
+        uses: cache@v1
+        with:
+          key: pip-${{ hashFiles('requirements.txt') }}
+          paths:
+            - .venv
+
+      - name: install
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+
+  - name: validate
+    needs: [setup]
+    steps:
+      - name: lint
+        run: |
+          source .venv/bin/activate
+          ruff check src/
+          mypy src/
+
+      - name: test
+        run: |
+          source .venv/bin/activate
+          pytest tests/ -v --cov=src
+
+  - name: train
+    needs: [validate]
+    environment:
+      type: firecracker
+      firecracker:
+        vcpu_count: 8
+        memory_mb: 32768
+        # gpu: true  # When available
+    steps:
+      - name: download-data
+        uses: cache@v1
+        with:
+          key: dataset-v2
+          paths:
+            - data/
+
+      - name: train-model
+        run: |
+          source .venv/bin/activate
+          python src/train.py --epochs 100 --output models/
+        timeout: 7200  # 2 hours
+
+      - name: upload-model
+        uses: artifact@v1
+        with:
+          name: model-${{ run_id }}
+          path: models/
+          retention_days: 30
+
+  - name: evaluate
+    needs: [train]
+    steps:
+      - name: download-model
+        uses: artifact@v1
+        with:
+          download: true
+          name: model-${{ run_id }}
+
+      - name: evaluate
+        run: |
+          source .venv/bin/activate
+          python src/evaluate.py --model models/
+
+      - name: upload-report
+        uses: artifact@v1
+        with:
+          name: evaluation-report
+          path: reports/
+
+  - name: deploy
+    needs: [evaluate]
+    condition: branch == 'main'
+    approval:
+      required: true
+      approvers: [ml-team]
+    steps:
+      - name: deploy-model
+        uses: sagemaker-deploy@v1
+        with:
+          model_artifact: models/
+          endpoint: ml-inference-prod

@@ -1,0 +1,93 @@
+# Go Microservice Pipeline
+# Demonstrates: Go modules caching, protobuf, multi-arch Docker
+
+name: go-microservice
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main]
+  - pull_request:
+      branches: [main]
+
+variables:
+  CGO_ENABLED: "0"
+  REGISTRY: gcr.io/myproject
+
+stages:
+  - name: setup
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+
+      - name: cache-go
+        uses: cache@v1
+        with:
+          key: go-${{ hashFiles('go.sum') }}
+          paths:
+            - ~/go/pkg/mod
+
+      - name: generate
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go generate ./...
+
+  - name: quality
+    needs: [setup]
+    steps:
+      - name: lint
+        run: golangci-lint run ./...
+
+      - name: test
+        run: go test -race -coverprofile=coverage.out ./...
+
+      - name: coverage
+        run: go tool cover -func=coverage.out
+
+  - name: build
+    needs: [quality]
+    matrix:
+      arch: [amd64, arm64]
+    steps:
+      - name: build
+        run: |
+          GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o bin/service-${{ matrix.arch }} ./cmd/service
+
+      - name: docker-build
+        uses: docker-build@v1
+        with:
+          file: Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          tags: ${{ REGISTRY }}/service:${{ sha }}-${{ matrix.arch }}
+
+  - name: push
+    needs: [build]
+    condition: branch == 'main'
+    steps:
+      - name: gcp-auth
+        uses: gcp-auth@v1
+        with:
+          workload_identity_provider: projects/123/locations/global/workloadIdentityPools/ci/providers/oxide
+          service_account: ci-deploy@myproject.iam.gserviceaccount.com
+
+      - name: docker-push
+        uses: docker-push@v1
+        with:
+          registry: gcr.io
+
+      - name: create-manifest
+        run: |
+          docker manifest create ${{ REGISTRY }}/service:${{ sha }} \
+            ${{ REGISTRY }}/service:${{ sha }}-amd64 \
+            ${{ REGISTRY }}/service:${{ sha }}-arm64
+          docker manifest push ${{ REGISTRY }}/service:${{ sha }}
+
+  - name: deploy
+    needs: [push]
+    steps:
+      - name: deploy-cloudrun
+        uses: cloudrun-deploy@v1
+        with:
+          service: my-service
+          region: us-central1
+          image: ${{ REGISTRY }}/service:${{ sha }}

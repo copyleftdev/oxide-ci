@@ -1,0 +1,86 @@
+# Nix DevShell Pipeline
+# Demonstrates: Pure Nix builds, flake evaluation, binary cache
+
+name: nix-devshell
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main]
+      paths: ["**.nix", "flake.lock", "src/**"]
+
+environment:
+  type: nix
+  nix:
+    flake: ".#ci"
+    pure: true
+    sandbox: true
+    substituters:
+      - https://cache.nixos.org
+      - https://nix-community.cachix.org
+    trusted_public_keys:
+      - cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      - nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+
+stages:
+  - name: check
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+
+      - name: flake-check
+        run: nix flake check
+
+      - name: format-check
+        run: |
+          nixpkgs-fmt --check *.nix
+          nixpkgs-fmt --check nix/
+
+  - name: build
+    needs: [check]
+    steps:
+      - name: build-package
+        run: nix build .#default --print-build-logs
+
+      - name: build-devshell
+        run: nix build .#devShells.x86_64-linux.default
+
+      - name: build-docker
+        run: nix build .#dockerImage
+
+      - name: upload-result
+        uses: artifact@v1
+        with:
+          name: nix-result
+          path: result/
+
+  - name: test
+    needs: [build]
+    steps:
+      - name: run-tests
+        run: nix develop --command cargo test
+
+      - name: integration-tests
+        run: nix develop --command ./scripts/integration-test.sh
+
+  - name: cache
+    needs: [build]
+    condition: branch == 'main'
+    steps:
+      - name: push-to-cachix
+        run: |
+          nix build .#default --json | jq -r '.[].outputs.out' | cachix push myorg
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_TOKEN }}
+
+  - name: deploy
+    needs: [test, cache]
+    condition: branch == 'main'
+    steps:
+      - name: deploy-nixos
+        run: |
+          nix run .#deploy -- --target production
+
+      - name: verify
+        run: |
+          ssh prod-server "systemctl status myapp"

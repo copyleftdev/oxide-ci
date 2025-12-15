@@ -1,0 +1,84 @@
+# Rust CLI Build Pipeline
+# Demonstrates: Caching, matrix builds, release artifacts
+
+name: rust-cli
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main]
+      paths: ["src/**", "Cargo.toml", "Cargo.lock"]
+  - pull_request:
+      branches: [main]
+
+variables:
+  CARGO_TERM_COLOR: always
+
+stages:
+  - name: check
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+
+      - name: cache-cargo
+        uses: cache@v1
+        with:
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          paths:
+            - ~/.cargo/registry
+            - ~/.cargo/git
+            - target
+
+      - name: fmt
+        run: cargo fmt --check
+
+      - name: clippy
+        run: cargo clippy -- -D warnings
+
+  - name: test
+    needs: [check]
+    steps:
+      - name: unit-tests
+        run: cargo test --lib
+
+      - name: integration-tests
+        run: cargo test --test '*'
+
+  - name: build
+    needs: [test]
+    matrix:
+      os: [linux, macos, windows]
+      include:
+        - os: linux
+          target: x86_64-unknown-linux-musl
+        - os: macos
+          target: x86_64-apple-darwin
+        - os: windows
+          target: x86_64-pc-windows-msvc
+    steps:
+      - name: build-release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: upload-artifact
+        uses: artifact@v1
+        with:
+          name: mycli-${{ matrix.os }}
+          path: target/${{ matrix.target }}/release/mycli*
+
+  - name: release
+    needs: [build]
+    condition: startsWith(ref, 'refs/tags/v')
+    steps:
+      - name: download-artifacts
+        uses: artifact@v1
+        with:
+          download: true
+          name: mycli-*
+
+      - name: create-release
+        uses: github-release@v1
+        with:
+          files: |
+            mycli-linux
+            mycli-macos
+            mycli-windows.exe

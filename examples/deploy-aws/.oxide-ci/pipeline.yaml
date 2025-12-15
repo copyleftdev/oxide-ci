@@ -1,0 +1,110 @@
+# AWS Deployment Pipeline
+# Demonstrates: OIDC keyless auth, ECS, Lambda, S3 sync
+
+name: deploy-aws
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main]
+      paths: ["src/**", "infrastructure/**"]
+
+variables:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 123456789.dkr.ecr.us-east-1.amazonaws.com
+
+stages:
+  - name: authenticate
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+
+      # Keyless auth - no static credentials!
+      - name: aws-auth
+        uses: aws-auth@v1
+        with:
+          role_arn: arn:aws:iam::123456789:role/oxide-ci-deploy
+          region: ${{ AWS_REGION }}
+
+  - name: build
+    needs: [authenticate]
+    steps:
+      - name: docker-build
+        uses: docker-build@v1
+        with:
+          tags: ${{ ECR_REGISTRY }}/myapp:${{ sha }}
+
+      - name: ecr-push
+        uses: ecr-push@v1
+        with:
+          registry: ${{ ECR_REGISTRY }}
+
+  - name: deploy-staging
+    needs: [build]
+    steps:
+      - name: ecs-deploy
+        uses: ecs-deploy@v1
+        with:
+          cluster: staging
+          service: myapp
+          task_definition: infrastructure/ecs/task-def.json
+          image: ${{ ECR_REGISTRY }}/myapp:${{ sha }}
+          wait: true
+
+      - name: smoke-test
+        run: |
+          curl -f https://staging.myapp.com/health || exit 1
+
+  - name: deploy-lambda
+    needs: [authenticate]
+    steps:
+      - name: build-lambda
+        run: |
+          cd functions/
+          zip -r function.zip .
+
+      - name: lambda-deploy
+        uses: lambda-deploy@v1
+        with:
+          function_name: myapp-processor
+          zip_file: functions/function.zip
+
+  - name: deploy-static
+    needs: [authenticate]
+    steps:
+      - name: build-frontend
+        run: npm run build
+
+      - name: s3-sync
+        uses: s3-sync@v1
+        with:
+          source: dist/
+          bucket: myapp-static-prod
+          delete: true
+
+      - name: cloudfront-invalidate
+        uses: cloudfront-invalidate@v1
+        with:
+          distribution_id: E1234567890
+          paths: ["/*"]
+
+  - name: deploy-production
+    needs: [deploy-staging]
+    condition: branch == 'main'
+    approval:
+      required: true
+      approvers: [platform-team, backend-lead]
+      timeout_hours: 24
+    steps:
+      - name: ecs-deploy-prod
+        uses: ecs-deploy@v1
+        with:
+          cluster: production
+          service: myapp
+          image: ${{ ECR_REGISTRY }}/myapp:${{ sha }}
+
+      - name: notify
+        uses: slack-notify@v1
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          message: "Deployed ${{ sha }} to production"

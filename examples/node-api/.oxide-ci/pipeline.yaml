@@ -1,0 +1,89 @@
+# Node.js REST API Pipeline
+# Demonstrates: npm caching, Docker multi-stage, container registry
+
+name: node-api
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main, develop]
+  - pull_request:
+      branches: [main]
+
+variables:
+  NODE_ENV: test
+  REGISTRY: ghcr.io
+
+stages:
+  - name: install
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+
+      - name: cache-npm
+        uses: cache@v1
+        with:
+          key: npm-${{ hashFiles('package-lock.json') }}
+          paths:
+            - node_modules
+            - ~/.npm
+
+      - name: install-deps
+        run: npm ci
+
+  - name: quality
+    needs: [install]
+    steps:
+      - name: lint
+        run: npm run lint
+
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: test
+        run: npm test -- --coverage
+        env:
+          CI: true
+
+      - name: upload-coverage
+        uses: artifact@v1
+        with:
+          name: coverage
+          path: coverage/
+
+  - name: build
+    needs: [quality]
+    steps:
+      - name: build-app
+        run: npm run build
+
+      - name: docker-build
+        uses: docker-build@v1
+        with:
+          file: Dockerfile
+          tags: |
+            ${{ REGISTRY }}/myorg/api:${{ sha }}
+            ${{ REGISTRY }}/myorg/api:latest
+          cache_from: ${{ REGISTRY }}/myorg/api:latest
+
+  - name: push
+    needs: [build]
+    condition: branch == 'main'
+    steps:
+      - name: docker-push
+        uses: docker-push@v1
+        with:
+          registry: ${{ REGISTRY }}
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+  - name: deploy-staging
+    needs: [push]
+    condition: branch == 'main'
+    steps:
+      - name: deploy
+        uses: ecs-deploy@v1
+        with:
+          cluster: staging
+          service: api
+          image: ${{ REGISTRY }}/myorg/api:${{ sha }}

@@ -1,0 +1,106 @@
+# Monorepo Pipeline
+# Demonstrates: Path-based triggers, parallel builds, shared caching
+
+name: monorepo
+version: "1.0"
+
+triggers:
+  - push:
+      branches: [main]
+  - pull_request:
+      branches: [main]
+
+stages:
+  # Detect which packages changed
+  - name: detect
+    steps:
+      - name: checkout
+        uses: git-checkout@v1
+        with:
+          fetch_depth: 0
+
+      - name: detect-changes
+        id: changes
+        run: |
+          # Compare with base branch
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "changed=$CHANGED" >> $OXIDE_OUTPUT
+          
+          # Set flags
+          [[ "$CHANGED" == *"packages/api/"* ]] && echo "api=true" >> $OXIDE_OUTPUT
+          [[ "$CHANGED" == *"packages/web/"* ]] && echo "web=true" >> $OXIDE_OUTPUT
+          [[ "$CHANGED" == *"packages/shared/"* ]] && echo "shared=true" >> $OXIDE_OUTPUT
+
+  # Shared package (if changed, rebuild dependents)
+  - name: shared
+    needs: [detect]
+    condition: steps.changes.outputs.shared == 'true'
+    steps:
+      - name: install
+        run: pnpm install --filter @mono/shared
+
+      - name: build
+        run: pnpm --filter @mono/shared build
+
+      - name: test
+        run: pnpm --filter @mono/shared test
+
+  # API package
+  - name: api
+    needs: [detect, shared]
+    condition: |
+      steps.changes.outputs.api == 'true' || 
+      steps.changes.outputs.shared == 'true'
+    steps:
+      - name: install
+        run: pnpm install --filter @mono/api
+
+      - name: build
+        run: pnpm --filter @mono/api build
+
+      - name: test
+        run: pnpm --filter @mono/api test
+
+      - name: docker
+        uses: docker-build@v1
+        with:
+          context: packages/api
+          tags: ghcr.io/org/api:${{ sha }}
+
+  # Web package
+  - name: web
+    needs: [detect, shared]
+    condition: |
+      steps.changes.outputs.web == 'true' || 
+      steps.changes.outputs.shared == 'true'
+    steps:
+      - name: install
+        run: pnpm install --filter @mono/web
+
+      - name: build
+        run: pnpm --filter @mono/web build
+
+      - name: test
+        run: pnpm --filter @mono/web test
+
+      - name: deploy
+        uses: vercel-deploy@v1
+        with:
+          project: mono-web
+
+  # Only runs if both API and Web built
+  - name: e2e
+    needs: [api, web]
+    condition: success()
+    steps:
+      - name: start-services
+        run: docker-compose up -d
+
+      - name: run-e2e
+        run: pnpm --filter @mono/e2e test
+
+      - name: upload-report
+        uses: artifact@v1
+        with:
+          name: e2e-report
+          path: packages/e2e/reports/
