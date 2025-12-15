@@ -1,0 +1,150 @@
+# Monorepo Pipeline - Runnable Example
+# Demonstrates: Multi-package builds, parallel-like flow
+
+name: monorepo-simple
+version: "1.0"
+
+variables:
+  NODE_ENV: test
+
+stages:
+  - name: detect
+    steps:
+      - name: show-structure
+        run: |
+          echo "=== Monorepo Structure ==="
+          echo "packages/"
+          echo "  ├── shared/    (common utilities)"
+          echo "  ├── api/       (backend service)"
+          echo "  ├── web/       (frontend app)"
+          echo "  └── e2e/       (integration tests)"
+
+      - name: check-changes
+        run: |
+          echo "=== Detecting Changes ==="
+          echo "Checking git diff against main..."
+          # In real usage: git diff --name-only origin/main...HEAD
+          echo "Changed files:"
+          echo "  - packages/api/src/index.ts"
+          echo "  - packages/shared/lib/utils.ts"
+          echo ""
+          echo "Affected packages: shared, api"
+
+  - name: shared
+    steps:
+      - name: install-shared
+        run: |
+          echo "=== Building: @mono/shared ==="
+          echo "$ pnpm install --filter @mono/shared"
+          sleep 0.2
+          echo "Dependencies installed"
+
+      - name: build-shared
+        run: |
+          echo "$ pnpm --filter @mono/shared build"
+          sleep 0.3
+          echo "✓ Compiled TypeScript"
+          echo "✓ Generated types"
+
+      - name: test-shared
+        run: |
+          echo "$ pnpm --filter @mono/shared test"
+          sleep 0.2
+          echo "PASS src/utils.test.ts"
+          echo "PASS src/types.test.ts"
+          echo "Tests: 12 passed, 12 total"
+
+  - name: api
+    steps:
+      - name: install-api
+        run: |
+          echo "=== Building: @mono/api ==="
+          echo "$ pnpm install --filter @mono/api"
+          sleep 0.2
+          echo "Dependencies installed (using @mono/shared from workspace)"
+
+      - name: build-api
+        run: |
+          echo "$ pnpm --filter @mono/api build"
+          sleep 0.3
+          echo "✓ Compiled src/index.ts"
+          echo "✓ Compiled src/routes/*.ts"
+          echo "✓ Output: dist/index.js"
+
+      - name: test-api
+        run: |
+          echo "$ pnpm --filter @mono/api test"
+          sleep 0.3
+          echo "PASS src/routes/health.test.ts"
+          echo "PASS src/routes/users.test.ts"
+          echo "PASS src/middleware/auth.test.ts"
+          echo "Tests: 24 passed, 24 total"
+
+      - name: docker-build
+        run: |
+          echo "$ docker build -t api:local packages/api/"
+          sleep 0.2
+          echo "Step 1/5: FROM node:20-alpine"
+          echo "Step 2/5: WORKDIR /app"
+          echo "Step 3/5: COPY package*.json ./"
+          echo "Step 4/5: RUN npm ci --production"
+          echo "Step 5/5: COPY dist/ ./dist/"
+          echo "Successfully built api:local"
+
+  - name: web
+    steps:
+      - name: install-web
+        run: |
+          echo "=== Building: @mono/web ==="
+          echo "$ pnpm install --filter @mono/web"
+          sleep 0.2
+          echo "Dependencies installed"
+
+      - name: build-web
+        run: |
+          echo "$ pnpm --filter @mono/web build"
+          sleep 0.5
+          echo "vite v5.0.0 building for production..."
+          echo "✓ 142 modules transformed"
+          echo "dist/index.html         0.5 kB"
+          echo "dist/assets/index.js   145.2 kB"
+          echo "dist/assets/index.css   12.3 kB"
+          echo "✓ built in 1.2s"
+
+      - name: test-web
+        run: |
+          echo "$ pnpm --filter @mono/web test"
+          sleep 0.2
+          echo "PASS src/App.test.tsx"
+          echo "PASS src/components/Button.test.tsx"
+          echo "Tests: 18 passed, 18 total"
+
+  - name: e2e
+    steps:
+      - name: start-services
+        run: |
+          echo "=== E2E Tests ==="
+          echo "$ docker-compose up -d"
+          sleep 0.3
+          echo "Starting api... done"
+          echo "Starting web... done"
+          echo "Starting postgres... done"
+
+      - name: run-e2e
+        run: |
+          echo "$ pnpm --filter @mono/e2e test"
+          sleep 0.5
+          echo "Running Playwright tests..."
+          echo ""
+          echo "  ✓ login.spec.ts (3 tests)"
+          echo "  ✓ dashboard.spec.ts (5 tests)"
+          echo "  ✓ settings.spec.ts (4 tests)"
+          echo ""
+          echo "12 passed (8.2s)"
+
+      - name: cleanup
+        run: |
+          echo "$ docker-compose down"
+          echo "Stopped all services"
+          echo ""
+          echo "=== Monorepo Build Complete ==="
