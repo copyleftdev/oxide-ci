@@ -18,6 +18,8 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 futures = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
 bollard = "0.18"
 async-stream = "0.3"
 
