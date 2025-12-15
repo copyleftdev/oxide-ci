@@ -1,0 +1,146 @@
+# Docker Compose for full Oxide CI stack
+# Includes all services running in containers
+
+services:
+  # Infrastructure
+  postgres:
+    image: postgres:16-alpine
+    container_name: oxide-postgres
+    environment:
+      POSTGRES_USER: oxide
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oxide_dev_password}
+      POSTGRES_DB: oxide
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxide"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oxide-net
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: oxide-nats
+    command: ["--jetstream", "--store_dir=/data", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oxide-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: oxide-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: oxide
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-oxide_dev_password}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oxide-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: oxide-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - oxide-net
+
+  # Oxide Services
+  oxide-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: oxide-api
+    environment:
+      DATABASE_URL: postgres://oxide:${POSTGRES_PASSWORD:-oxide_dev_password}@postgres:5432/oxide
+      NATS_URL: nats://nats:4222
+      RUST_LOG: info,oxide=debug
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - oxide-net
+
+  oxide-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+    container_name: oxide-scheduler
+    environment:
+      DATABASE_URL: postgres://oxide:${POSTGRES_PASSWORD:-oxide_dev_password}@postgres:5432/oxide
+      NATS_URL: nats://nats:4222
+      RUST_LOG: info,oxide=debug
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - oxide-net
+
+  oxide-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: oxide-agent
+    environment:
+      NATS_URL: nats://nats:4222
+      CACHE_URL: http://minio:9000
+      CACHE_ACCESS_KEY: oxide
+      CACHE_SECRET_KEY: ${MINIO_PASSWORD:-oxide_dev_password}
+      RUST_LOG: info,oxide=debug
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - agent_workspace:/var/oxide/workspace
+    depends_on:
+      nats:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - oxide-net
+
+volumes:
+  postgres_data:
+  nats_data:
+  minio_data:
+  agent_workspace:
+
+networks:
+  oxide-net:
+    driver: bridge

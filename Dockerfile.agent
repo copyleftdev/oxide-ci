@@ -1,0 +1,29 @@
+# Dockerfile for oxide-agent service
+FROM rust:1.83-alpine AS builder
+
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
+
+WORKDIR /app
+
+# Copy workspace files
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+
+# Build release binary
+RUN cargo build --release -p oxide-agent
+
+# Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates docker-cli git
+
+WORKDIR /app
+
+COPY --from=builder /app/target/release/oxide-agent /app/oxide-agent
+
+# Create workspace directory
+RUN mkdir -p /var/oxide/workspace /var/oxide/plugins /var/oxide/cache
+
+ENV RUST_LOG=info
+
+CMD ["/app/oxide-agent"]

@@ -1,0 +1,70 @@
+# Docker Compose for Oxide CI development dependencies
+# Use this when running Rust services locally with `cargo run`
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: oxide-postgres
+    environment:
+      POSTGRES_USER: oxide
+      POSTGRES_PASSWORD: oxide_dev_password
+      POSTGRES_DB: oxide
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxide"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: oxide-nats
+    command: ["--jetstream", "--store_dir=/data", "-m", "8222"]
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: oxide-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: oxide
+      MINIO_ROOT_PASSWORD: oxide_dev_password
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: oxide-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "6831:6831/udp"   # Jaeger thrift
+      - "16686:16686"     # UI
+      - "4317:4317"       # OTLP gRPC
+      - "4318:4318"       # OTLP HTTP
+
+volumes:
+  postgres_data:
+  nats_data:
+  minio_data:
