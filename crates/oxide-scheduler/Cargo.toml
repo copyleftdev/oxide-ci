@@ -13,5 +13,12 @@ oxide-licensing = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 petgraph = "0.7"
 cron = "0.15"
+
+[dev-dependencies]
+tokio-test = "0.4"
