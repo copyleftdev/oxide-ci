@@ -10,6 +10,7 @@ use std::collections::HashSet;
 /// Validator for spec-code correlation.
 pub struct SpecValidator {
     registry: SchemaRegistry,
+    #[allow(dead_code)]
     spec_dir: String,
 }
 
@@ -52,8 +53,9 @@ impl SpecValidator {
         // Generate JSON Schema from Rust type
         let rust_schema = schema_for!(T);
 
-        // Compare schemas
-        self.compare_schemas(&rust_schema.schema, async_schema, "", &mut result);
+        // Compare schemas - wrap SchemaObject in Schema::Object
+        let schema = schemars::schema::Schema::Object(rust_schema.schema);
+        self.compare_schemas(&schema, async_schema, "", &mut result);
 
         result.is_valid = result.errors.is_empty();
         result
@@ -126,13 +128,14 @@ impl SpecValidator {
                 }
             });
 
-            if let Some(rt) = rust_type {
-                if &rt != async_type && !(rt == "integer" && async_type == "number") {
-                    result.warnings.push(format!(
-                        "{}: type mismatch - spec has '{}', Rust has '{}'",
-                        path, async_type, rt
-                    ));
-                }
+            if let Some(rt) = rust_type
+                && &rt != async_type
+                && !(rt == "integer" && async_type == "number")
+            {
+                result.warnings.push(format!(
+                    "{}: type mismatch - spec has '{}', Rust has '{}'",
+                    path, async_type, rt
+                ));
             }
         }
 
@@ -170,6 +173,7 @@ impl SpecValidator {
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn validate_json_against_schema(
         &self,
         json: &serde_json::Value,
@@ -197,7 +201,7 @@ impl SpecValidator {
             {
                 result.errors.push(SpecValidationError {
                     path: path.to_string(),
-                    message: format!("Type mismatch"),
+                    message: "Type mismatch".to_string(),
                     spec_expected: Some(expected_type.clone()),
                     rust_actual: Some(actual_type.to_string()),
                 });
@@ -235,15 +239,15 @@ impl SpecValidator {
         }
 
         // Check enum values
-        if let Some(enum_values) = &schema.enum_values {
-            if !enum_values.contains(json) {
-                result.errors.push(SpecValidationError {
-                    path: path.to_string(),
-                    message: "Value not in enum".to_string(),
-                    spec_expected: Some(format!("{:?}", enum_values)),
-                    rust_actual: Some(json.to_string()),
-                });
-            }
+        if let Some(enum_values) = &schema.enum_values
+            && !enum_values.contains(json)
+        {
+            result.errors.push(SpecValidationError {
+                path: path.to_string(),
+                message: "Value not in enum".to_string(),
+                spec_expected: Some(format!("{:?}", enum_values)),
+                rust_actual: Some(json.to_string()),
+            });
         }
     }
 }

@@ -5,6 +5,8 @@
 //! 2. Generates a list of all schema names
 //! 3. Optionally generates Rust types from schemas (future)
 
+#![allow(clippy::collapsible_if)]
+
 use std::collections::HashSet;
 use std::env;
 use std::fs;
@@ -30,10 +32,13 @@ fn main() {
         if let Ok(entries) = fs::read_dir(&schemas_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().map(|e| e == "yaml").unwrap_or(false) {
-                    if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
+                let is_yaml = path.extension().map(|e| e == "yaml").unwrap_or(false);
+                let filename = path.file_name().and_then(|f| f.to_str());
+
+                if is_yaml {
+                    if let Some(fname) = filename {
                         // Skip index files
-                        if filename.starts_with('_') {
+                        if fname.starts_with('_') {
                             continue;
                         }
 
@@ -78,8 +83,10 @@ pub const SCHEMA_COUNT: usize = {};
 
     // Tell Cargo to rerun if spec files change
     println!("cargo:rerun-if-changed=../../spec/schemas");
-    for entry in fs::read_dir(&schemas_dir).into_iter().flatten().flatten() {
-        println!("cargo:rerun-if-changed={}", entry.path().display());
+    if let Ok(entries) = fs::read_dir(&schemas_dir) {
+        for entry in entries.flatten() {
+            println!("cargo:rerun-if-changed={}", entry.path().display());
+        }
     }
 
     println!("cargo:warning=Found {} schemas in spec", schema_names.len());

@@ -102,19 +102,19 @@ impl SchemaRegistry {
         if let Ok(entries) = std::fs::read_dir(&schemas_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().map(|e| e == "yaml").unwrap_or(false) {
-                    if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
-                        // Skip index files
-                        if filename.starts_with('_') {
-                            continue;
-                        }
+                if path.extension().map(|e| e == "yaml").unwrap_or(false)
+                    && let Some(filename) = path.file_name().and_then(|f| f.to_str())
+                {
+                    // Skip index files
+                    if filename.starts_with('_') {
+                        continue;
+                    }
 
-                        let schemas =
-                            AsyncApiSchema::from_yaml_file(path.to_str().unwrap_or_default())?;
+                    let schemas =
+                        AsyncApiSchema::from_yaml_file(path.to_str().unwrap_or_default())?;
 
-                        for (name, schema) in schemas {
-                            registry.schemas.insert(name, schema);
-                        }
+                    for (name, schema) in schemas {
+                        registry.schemas.insert(name, schema);
                     }
                 }
             }
