@@ -4,4 +4,6 @@ pub mod manager;
 pub mod native;
 pub mod providers;
 
-// TODO: Implement secret providers
+pub use manager::{SecretManager, SecretManagerConfig};
+pub use native::NativeProvider;
+pub use providers::{EnvProvider, FileProvider, SecretProvider, SecretValue};

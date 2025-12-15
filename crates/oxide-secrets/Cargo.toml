@@ -9,7 +9,12 @@ oxide-core = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
 reqwest = { workspace = true }
+rand = "0.8"
+aes-gcm = "0.10"
 aws-sdk-secretsmanager = "1"
 aws-sdk-ssm = "1"
-aes-gcm = "0.10"
