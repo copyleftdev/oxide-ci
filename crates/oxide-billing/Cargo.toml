@@ -10,3 +10,10 @@ tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
 async-stripe = { version = "0.34", features = ["runtime-tokio-hyper"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
