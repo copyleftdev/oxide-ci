@@ -9,5 +9,11 @@ oxide-core = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
-aws-sdk-s3 = "1"
+chrono = { workspace = true }
+serde = { workspace = true }
 sha2 = { workspace = true }
+hex = "0.4"
+zstd = "0.13"
+flate2 = "1.1"
+lz4_flex = "0.11"
+aws-sdk-s3 = "1"
