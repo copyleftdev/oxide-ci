@@ -133,14 +133,13 @@ fn test_pipeline_definition_roundtrip() {
         version: "1".to_string(),
         name: "test-pipeline".to_string(),
         description: Some("A test pipeline".to_string()),
-        triggers: vec![TriggerConfig {
-            trigger_type: TriggerType::Push,
-            branches: vec!["main".to_string()],
-            paths: vec![],
-            paths_ignore: vec![],
-            tags: vec![],
-            cron: None,
-            timezone: None,
+        triggers: vec![TriggerConfig::Push {
+            push: Some(TriggerFilter {
+                branches: vec!["main".to_string()],
+                paths: vec![],
+                paths_ignore: vec![],
+                tags: vec![],
+            }),
         }],
         variables: HashMap::new(),
         stages: vec![],

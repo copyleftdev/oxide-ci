@@ -82,17 +82,21 @@ impl MatrixExpander {
 
     fn generate_combinations(
         &self,
-        dimensions: &HashMap<String, Vec<serde_json::Value>>,
+        dimensions: &HashMap<String, serde_json::Value>,
     ) -> Vec<HashMap<String, serde_json::Value>> {
-        let keys: Vec<&String> = dimensions.keys().collect();
-        if keys.is_empty() {
+        // Filter to only array dimensions (exclude include/exclude/fail_fast/max_parallel)
+        let array_dims: Vec<(&String, &Vec<serde_json::Value>)> = dimensions
+            .iter()
+            .filter_map(|(k, v)| v.as_array().map(|arr| (k, arr)))
+            .collect();
+
+        if array_dims.is_empty() {
             return vec![HashMap::new()];
         }
 
         let mut result = vec![HashMap::new()];
 
-        for key in keys {
-            let values = &dimensions[key];
+        for (key, values) in array_dims {
             let mut new_result = Vec::new();
 
             for combo in result {
@@ -159,18 +163,11 @@ mod tests {
         let mut dimensions = HashMap::new();
         dimensions.insert(
             "os".to_string(),
-            vec![
-                serde_json::Value::String("linux".to_string()),
-                serde_json::Value::String("macos".to_string()),
-            ],
+            serde_json::json!(["linux", "macos"]),
         );
         dimensions.insert(
             "version".to_string(),
-            vec![
-                serde_json::Value::String("18".to_string()),
-                serde_json::Value::String("20".to_string()),
-                serde_json::Value::String("22".to_string()),
-            ],
+            serde_json::json!(["18", "20", "22"]),
         );
 
         let stage = StageDefinition {
@@ -222,17 +219,11 @@ mod tests {
         let mut dimensions = HashMap::new();
         dimensions.insert(
             "os".to_string(),
-            vec![
-                serde_json::Value::String("linux".to_string()),
-                serde_json::Value::String("macos".to_string()),
-            ],
+            serde_json::json!(["linux", "macos"]),
         );
         dimensions.insert(
             "arch".to_string(),
-            vec![
-                serde_json::Value::String("amd64".to_string()),
-                serde_json::Value::String("arm64".to_string()),
-            ],
+            serde_json::json!(["amd64", "arm64"]),
         );
 
         let mut exclude = HashMap::new();

@@ -1,0 +1,32 @@
+# Simple Go Pipeline - Actually Runnable
+name: go-simple
+version: "1.0"
+
+variables:
+  CGO_ENABLED: "0"
+  GOOS: linux
+
+stages:
+  - name: check
+    steps:
+      - name: go-version
+        run: go version
+
+      - name: go-env
+        run: go env GOPATH GOROOT
+
+  - name: build
+    steps:
+      - name: list-go-files
+        run: |
+          echo "Looking for Go files..."
+          find . -name "*.go" -type f 2>/dev/null | head -20 || echo "No Go files found"
+
+      - name: check-mod
+        run: |
+          if [ -f go.mod ]; then
+            echo "Found go.mod:"
+            cat go.mod
+          else
+            echo "No go.mod in current directory"
+          fi

@@ -33,10 +33,9 @@ fn default_timeout() -> u32 {
     60
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct TriggerConfig {
-    #[serde(rename = "type")]
-    pub trigger_type: TriggerType,
+/// Trigger branch/path filter options.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct TriggerFilter {
     #[serde(default)]
     pub branches: Vec<String>,
     #[serde(default)]
@@ -45,10 +44,52 @@ pub struct TriggerConfig {
     pub paths_ignore: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
+}
+
+/// Schedule trigger options.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct ScheduleConfig {
     #[serde(default)]
     pub cron: Option<String>,
     #[serde(default)]
     pub timezone: Option<String>,
+}
+
+/// Trigger configuration - supports both shorthand and explicit formats.
+/// Shorthand: `- push:` or `- push: { branches: [main] }`
+/// Explicit: `- type: push`
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum TriggerConfig {
+    /// Shorthand push trigger: `- push:` or `- push: { branches: [...] }`
+    Push {
+        push: Option<TriggerFilter>,
+    },
+    /// Shorthand pull_request trigger
+    PullRequest {
+        pull_request: Option<TriggerFilter>,
+    },
+    /// Shorthand schedule trigger
+    Schedule {
+        schedule: Option<ScheduleConfig>,
+    },
+    /// Explicit type format: `- type: push`
+    Explicit {
+        #[serde(rename = "type")]
+        trigger_type: TriggerType,
+        #[serde(default)]
+        branches: Vec<String>,
+        #[serde(default)]
+        paths: Vec<String>,
+        #[serde(default)]
+        paths_ignore: Vec<String>,
+        #[serde(default)]
+        tags: Vec<String>,
+        #[serde(default)]
+        cron: Option<String>,
+        #[serde(default)]
+        timezone: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -60,6 +101,86 @@ pub enum TriggerType {
     Manual,
     Api,
     Webhook,
+    Schedule,
+}
+
+impl TriggerConfig {
+    /// Get the trigger type for this config.
+    pub fn trigger_type(&self) -> TriggerType {
+        match self {
+            TriggerConfig::Push { .. } => TriggerType::Push,
+            TriggerConfig::PullRequest { .. } => TriggerType::PullRequest,
+            TriggerConfig::Schedule { .. } => TriggerType::Schedule,
+            TriggerConfig::Explicit { trigger_type, .. } => *trigger_type,
+        }
+    }
+
+    /// Get branches filter.
+    pub fn branches(&self) -> &[String] {
+        match self {
+            TriggerConfig::Push { push } => {
+                push.as_ref().map(|f| f.branches.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::PullRequest { pull_request } => {
+                pull_request.as_ref().map(|f| f.branches.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::Schedule { .. } => &[],
+            TriggerConfig::Explicit { branches, .. } => branches.as_slice(),
+        }
+    }
+
+    /// Get paths filter.
+    pub fn paths(&self) -> &[String] {
+        match self {
+            TriggerConfig::Push { push } => {
+                push.as_ref().map(|f| f.paths.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::PullRequest { pull_request } => {
+                pull_request.as_ref().map(|f| f.paths.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::Schedule { .. } => &[],
+            TriggerConfig::Explicit { paths, .. } => paths.as_slice(),
+        }
+    }
+
+    /// Get paths_ignore filter.
+    pub fn paths_ignore(&self) -> &[String] {
+        match self {
+            TriggerConfig::Push { push } => {
+                push.as_ref().map(|f| f.paths_ignore.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::PullRequest { pull_request } => {
+                pull_request.as_ref().map(|f| f.paths_ignore.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::Schedule { .. } => &[],
+            TriggerConfig::Explicit { paths_ignore, .. } => paths_ignore.as_slice(),
+        }
+    }
+
+    /// Get tags filter.
+    pub fn tags(&self) -> &[String] {
+        match self {
+            TriggerConfig::Push { push } => {
+                push.as_ref().map(|f| f.tags.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::PullRequest { pull_request } => {
+                pull_request.as_ref().map(|f| f.tags.as_slice()).unwrap_or(&[])
+            }
+            TriggerConfig::Schedule { .. } => &[],
+            TriggerConfig::Explicit { tags, .. } => tags.as_slice(),
+        }
+    }
+
+    /// Get cron schedule.
+    pub fn cron(&self) -> Option<&str> {
+        match self {
+            TriggerConfig::Schedule { schedule } => {
+                schedule.as_ref().and_then(|s| s.cron.as_deref())
+            }
+            TriggerConfig::Explicit { cron, .. } => cron.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -127,11 +248,20 @@ fn default_step_timeout() -> u32 {
     30
 }
 
+/// Condition expression - supports string shorthand or struct format.
+/// String: `condition: "branch == 'main'"`
+/// Struct: `condition: { if: "branch == 'main'" }`
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ConditionExpression {
-    #[serde(rename = "if")]
-    pub if_expr: Option<String>,
-    pub unless: Option<String>,
+#[serde(untagged)]
+pub enum ConditionExpression {
+    /// Simple string condition
+    Simple(String),
+    /// Structured condition with if/unless
+    Structured {
+        #[serde(rename = "if")]
+        if_expr: Option<String>,
+        unless: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -367,9 +497,10 @@ fn default_compression() -> String {
     "zstd".to_string()
 }
 
+/// Matrix configuration - dimensions are flattened into the struct.
+/// Example: `matrix: { os: [linux, macos], arch: [amd64, arm64] }`
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MatrixConfig {
-    pub dimensions: HashMap<String, Vec<serde_json::Value>>,
     #[serde(default)]
     pub include: Vec<HashMap<String, serde_json::Value>>,
     #[serde(default)]
@@ -378,6 +509,9 @@ pub struct MatrixConfig {
     pub fail_fast: bool,
     #[serde(default)]
     pub max_parallel: Option<u32>,
+    /// Arbitrary dimension keys (os, arch, etc.) are captured here
+    #[serde(flatten)]
+    pub dimensions: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

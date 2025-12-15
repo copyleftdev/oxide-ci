@@ -21,7 +21,7 @@ impl PipelineFixture {
                 version: "1".to_string(),
                 name: "test-pipeline".to_string(),
                 description: Some("A simple test pipeline".to_string()),
-                triggers: vec![TriggerConfig {
+                triggers: vec![TriggerConfig::Explicit {
                     trigger_type: TriggerType::Manual,
                     branches: vec![],
                     paths: vec![],

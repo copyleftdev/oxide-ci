@@ -74,36 +74,36 @@ impl TriggerMatcher {
                 branch,
                 paths_changed,
             } => {
-                if trigger.trigger_type != TriggerType::Push {
+                if trigger.trigger_type() != TriggerType::Push {
                     return false;
                 }
-                self.branch_matches(&trigger.branches, branch)
-                    && self.paths_match(&trigger.paths, &trigger.paths_ignore, paths_changed)
+                self.branch_matches(trigger.branches(), branch)
+                    && self.paths_match(trigger.paths(), trigger.paths_ignore(), paths_changed)
             }
             TriggerEvent::PullRequest {
                 target_branch,
                 paths_changed,
                 ..
             } => {
-                if trigger.trigger_type != TriggerType::PullRequest {
+                if trigger.trigger_type() != TriggerType::PullRequest {
                     return false;
                 }
-                self.branch_matches(&trigger.branches, target_branch)
-                    && self.paths_match(&trigger.paths, &trigger.paths_ignore, paths_changed)
+                self.branch_matches(trigger.branches(), target_branch)
+                    && self.paths_match(trigger.paths(), trigger.paths_ignore(), paths_changed)
             }
             TriggerEvent::Tag { name } => {
-                if trigger.trigger_type != TriggerType::Push {
+                if trigger.trigger_type() != TriggerType::Push {
                     return false;
                 }
-                self.tag_matches(&trigger.tags, name)
+                self.tag_matches(trigger.tags(), name)
             }
             TriggerEvent::Cron { schedule } => {
-                trigger.trigger_type == TriggerType::Cron
-                    && trigger.cron.as_ref() == Some(schedule)
+                trigger.trigger_type() == TriggerType::Cron
+                    && trigger.cron() == Some(schedule.as_str())
             }
-            TriggerEvent::Manual { .. } => trigger.trigger_type == TriggerType::Manual,
-            TriggerEvent::Api { .. } => trigger.trigger_type == TriggerType::Api,
-            TriggerEvent::Webhook { .. } => trigger.trigger_type == TriggerType::Webhook,
+            TriggerEvent::Manual { .. } => trigger.trigger_type() == TriggerType::Manual,
+            TriggerEvent::Api { .. } => trigger.trigger_type() == TriggerType::Api,
+            TriggerEvent::Webhook { .. } => trigger.trigger_type() == TriggerType::Webhook,
         }
     }
 
