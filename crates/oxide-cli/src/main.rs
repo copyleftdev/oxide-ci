@@ -4,6 +4,7 @@ use clap::Parser;
 
 mod commands;
 mod config;
+mod executor;
 mod handlers;
 
 use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};

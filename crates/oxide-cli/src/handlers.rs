@@ -60,31 +60,44 @@ pub async fn validate(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 /// Trigger a pipeline run.
 pub async fn run_pipeline(
-    config: &CliConfig,
+    _config: &CliConfig,
     pipeline: Option<String>,
-    branch: Option<String>,
-    wait: bool,
-    watch: bool,
+    _branch: Option<String>,
+    _wait: bool,
+    _watch: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let pipeline_name = pipeline.unwrap_or_else(|| "default".to_string());
-    let branch_name = branch.unwrap_or_else(|| "main".to_string());
+    use crate::executor::{self, ExecutorConfig};
+
+    // Find pipeline file
+    let pipeline_path = executor::find_pipeline_file(pipeline.as_deref());
+    let Some(path) = pipeline_path else {
+        println!(
+            "{} No pipeline file found. Try:",
+            style("✗").red()
+        );
+        println!("  - .oxide-ci/pipeline.yaml");
+        println!("  - oxide.yaml");
+        println!("  - Or specify path: oxide run --pipeline <path>");
+        return Ok(());
+    };
 
     println!(
-        "{} Triggering run for {} on {}",
-        style("▶").cyan(),
-        style(&pipeline_name).bold(),
-        style(&branch_name).dim()
+        "{} Loading pipeline from {}",
+        style("•").dim(),
+        style(path.display()).dim()
     );
 
-    // TODO: Make API call to trigger run
-    println!("  API URL: {}", config.api_url);
+    // Load and parse pipeline
+    let definition = executor::load_pipeline(&path)?;
 
-    if wait || watch {
-        println!("  Waiting for completion...");
-        // TODO: Poll for status or stream logs
+    // Execute locally
+    let exec_config = ExecutorConfig::default();
+    let result = executor::execute_pipeline(&definition, &exec_config, None).await?;
+
+    if !result.success {
+        std::process::exit(1);
     }
 
-    println!("{} Run triggered", style("✓").green());
     Ok(())
 }
 

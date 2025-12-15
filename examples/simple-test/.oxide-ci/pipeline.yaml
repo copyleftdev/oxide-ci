@@ -1,0 +1,21 @@
+name: simple-test
+version: "1.0"
+
+stages:
+  - name: build
+    steps:
+      - name: hello
+        run: echo "Hello from Oxide CI!"
+
+      - name: environment
+        run: |
+          echo "Working directory: $(pwd)"
+          echo "User: $(whoami)"
+
+      - name: list-files
+        run: ls -la
+
+  - name: test
+    steps:
+      - name: run-test
+        run: echo "Running tests... done!"
