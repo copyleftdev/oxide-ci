@@ -179,10 +179,9 @@ stages:
         plugin: "oxide/approval-gate@v1"
         variables:
           message: "Approve production deployment?"
-          required_approvers: 2
-          allowed_approvers:
-            - "@platform-team"
-          timeout_minutes: 60
+          required_approvers: "2"
+          allowed_approvers: "@platform-team"
+          timeout_minutes: "60"
       
       - name: deploy
         plugin: "oxide/aws-s3-sync@v1"
