@@ -1,0 +1,147 @@
+# Nix DevShell Pipeline - Runnable Demo
+# Demonstrates: Reproducible builds with Nix flakes
+
+name: nix-devshell-demo
+version: "1.0"
+
+stages:
+  - name: check
+    steps:
+      - name: show-flake
+        run: |
+          echo "=== flake.nix ==="
+          cat << 'EOF'
+          {
+            inputs = {
+              nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+              flake-utils.url = "github:numtide/flake-utils";
+            };
+
+            outputs = { self, nixpkgs, flake-utils }:
+              flake-utils.lib.eachDefaultSystem (system:
+                let pkgs = nixpkgs.legacyPackages.${system};
+                in {
+                  devShells.default = pkgs.mkShell {
+                    packages = with pkgs; [ rustc cargo clippy rustfmt ];
+                  };
+                  devShells.ci = pkgs.mkShell {
+                    packages = with pkgs; [ rustc cargo nixpkgs-fmt ];
+                  };
+                });
+          }
+          EOF
+
+      - name: flake-check
+        run: |
+          echo "$ nix flake check"
+          sleep 0.3
+          echo "checking input 'nixpkgs'..."
+          echo "checking input 'flake-utils'..."
+          echo "checking devShell 'x86_64-linux.default'..."
+          echo "checking devShell 'x86_64-linux.ci'..."
+          echo "✓ flake check passed"
+
+      - name: format-check
+        run: |
+          echo "$ nixpkgs-fmt --check *.nix"
+          sleep 0.2
+          echo "Checking flake.nix... OK"
+          echo "Checking nix/package.nix... OK"
+          echo "✓ All files formatted correctly"
+
+  - name: build
+    steps:
+      - name: build-package
+        run: |
+          echo "$ nix build .#default --print-build-logs"
+          sleep 0.5
+          echo "evaluating derivation..."
+          echo "building '/nix/store/abc123-myapp-0.1.0.drv'..."
+          echo "  > cargo build --release"
+          echo "  > Compiling myapp v0.1.0"
+          echo "  > Finished release [optimized] target"
+          echo "copying to /nix/store/xyz789-myapp-0.1.0..."
+          echo "✓ /nix/store/xyz789-myapp-0.1.0"
+
+      - name: build-devshell
+        run: |
+          echo "$ nix build .#devShells.x86_64-linux.default"
+          sleep 0.3
+          echo "building devShell..."
+          echo "  rustc 1.75.0"
+          echo "  cargo 1.75.0"
+          echo "  clippy 0.1.75"
+          echo "✓ devShell ready"
+
+      - name: build-docker
+        run: |
+          echo "$ nix build .#dockerImage"
+          sleep 0.4
+          echo "building docker image..."
+          echo "  Creating layer 1: base system"
+          echo "  Creating layer 2: application"
+          echo "  Writing manifest..."
+          echo "✓ result -> myapp-docker-image.tar.gz"
+
+  - name: test
+    steps:
+      - name: enter-devshell
+        run: |
+          echo "$ nix develop --command cargo test"
+          sleep 0.3
+          echo "entering devShell..."
+          echo "running cargo test"
+          echo ""
+          echo "running 15 tests"
+          echo "test lib::parser::tests::parse_valid ... ok"
+          echo "test lib::parser::tests::parse_invalid ... ok"
+          echo "test lib::runner::tests::execute ... ok"
+          echo "..."
+          echo "test result: ok. 15 passed; 0 failed"
+
+      - name: integration
+        run: |
+          echo "$ nix develop --command ./scripts/integration-test.sh"
+          sleep 0.4
+          echo "Starting integration tests..."
+          echo "  ✓ API health check"
+          echo "  ✓ Database connection"
+          echo "  ✓ Event processing"
+          echo "Integration tests passed"
+
+  - name: cache
+    steps:
+      - name: push-to-cachix
+        run: |
+          echo "$ nix build .#default --json | jq -r '.[].outputs.out' | cachix push myorg"
+          sleep 0.3
+          echo "compressing /nix/store/xyz789-myapp-0.1.0..."
+          echo "uploading to cache.cachix.org/myorg..."
+          echo "  ████████████████████ 100%"
+          echo "✓ Pushed 1 store path (12.4 MB)"
+
+  - name: deploy
+    steps:
+      - name: deploy-nixos
+        run: |
+          echo "$ nix run .#deploy -- --target production"
+          sleep 0.5
+          echo "Deploying to production..."
+          echo "  Evaluating system configuration..."
+          echo "  Building system profile..."
+          echo "  Copying closure to prod-server..."
+          echo "  Activating new configuration..."
+          echo "✓ Deployment complete"
+
+      - name: verify
+        run: |
+          echo "$ ssh prod-server 'systemctl status myapp'"
+          sleep 0.2
+          echo "● myapp.service - My Application"
+          echo "     Loaded: loaded (/etc/systemd/system/myapp.service)"
+          echo "     Active: active (running) since Sun 2025-12-15 11:14:00 UTC"
+          echo "   Main PID: 1234 (myapp)"
+          echo "     Memory: 24.5M"
+          echo "        CPU: 120ms"
+          echo ""
+          echo "=== Nix Pipeline Complete ==="
