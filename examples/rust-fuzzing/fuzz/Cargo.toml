@@ -1,0 +1,36 @@
+[package]
+name = "rust-fuzzing-example-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1.3", features = ["derive"] }
+
+[dependencies.rust-fuzzing-example]
+path = ".."
+
+[[bin]]
+name = "fuzz_parse_user"
+path = "fuzz_targets/fuzz_parse_user.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_validate_email"
+path = "fuzz_targets/fuzz_validate_email.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_parse_config"
+path = "fuzz_targets/fuzz_parse_config.rs"
+test = false
+doc = false
+bench = false
