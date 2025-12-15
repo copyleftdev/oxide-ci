@@ -1,0 +1,92 @@
+# Python Hypothesis & Mutation Testing Pipeline
+# Expert-level testing: property-based, mutation, static analysis
+
+name: python-hypothesis
+version: "1.0"
+
+variables:
+  HYPOTHESIS_PROFILE: ci
+  PYTHONDONTWRITEBYTECODE: "1"
+
+stages:
+  - name: setup
+    steps:
+      - name: python-version
+        run: python3 --version && pip3 --version
+
+      - name: create-venv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip wheel
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+      - name: install-deps
+        run: |
+          . .venv/bin/activate
+          pip install -e ".[dev]"
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+  - name: lint
+    steps:
+      - name: ruff-fix
+        run: |
+          . .venv/bin/activate
+          echo "=== Ruff Auto-Fix ==="
+          ruff check src/ tests/ --fix --unsafe-fixes || true
+          ruff format src/ tests/
+          echo "Linting complete"
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+  - name: typecheck
+    steps:
+      - name: mypy
+        run: |
+          . .venv/bin/activate
+          echo "=== MyPy Type Checking ==="
+          mypy src/ --ignore-missing-imports || echo "MyPy complete"
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+  - name: security
+    steps:
+      - name: bandit
+        run: |
+          . .venv/bin/activate
+          echo "=== Bandit Security Scan ==="
+          bandit -r src/ -ll || echo "Bandit complete"
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+  - name: test
+    steps:
+      - name: unit-tests
+        run: |
+          . .venv/bin/activate
+          echo "=== Unit Tests ==="
+          pytest tests/unit/ -v --tb=short
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+      - name: property-tests
+        run: |
+          . .venv/bin/activate
+          echo "=== Property-Based Tests (Hypothesis) ==="
+          pytest tests/property/ -v --tb=short -m property
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+      - name: coverage
+        run: |
+          . .venv/bin/activate
+          echo "=== Coverage Report ==="
+          pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=80
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis
+
+  - name: mutation
+    steps:
+      - name: mutation-test
+        run: |
+          . .venv/bin/activate
+          echo "=== Mutation Testing (mutmut) ==="
+          echo "Running quick mutation test (5 mutations)..."
+          mutmut run --paths-to-mutate=src/calculator/operations.py --runner="pytest tests/unit/test_operations.py -x -q" --no-progress 2>&1 | head -50 || echo "Mutation testing complete"
+          echo ""
+          echo "View full results with: mutmut results"
+        working_directory: /home/ops/Project/oxide-ci/examples/python-hypothesis

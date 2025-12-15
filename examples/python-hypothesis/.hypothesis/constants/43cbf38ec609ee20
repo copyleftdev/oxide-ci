@@ -1,0 +1,4 @@
+# file: /home/ops/Project/oxide-ci/examples/python-hypothesis/src/calculator/validators.py
+# hypothesis_version: 6.148.7
+
+[-1e+308, 1e+308, 'NaN is not allowed', 'T']

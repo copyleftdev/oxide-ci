@@ -1,0 +1,4 @@
+# file: /home/ops/Project/oxide-ci/examples/python-hypothesis/src/calculator/core.py
+# hypothesis_version: 6.148.7
+
+[0.0, 'Nothing to undo', 'add', 'clear', 'divide', 'init', 'multiply', 'power', 'set', 'subtract']

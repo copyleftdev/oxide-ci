@@ -1,0 +1,4 @@
+# file: /home/ops/Project/oxide-ci/examples/python-hypothesis/src/calculator/operations.py
+# hypothesis_version: 6.148.7
+
+[0.0, 1e+307, 'addition', 'division', 'exponentiation', 'multiplication', 'subtraction']

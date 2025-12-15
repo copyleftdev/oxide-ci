@@ -1,0 +1,4 @@
+# file: /home/ops/Project/oxide-ci/examples/python-hypothesis/src/calculator/exceptions.py
+# hypothesis_version: 6.148.7
+
+['Division by zero', 'invalid input']
