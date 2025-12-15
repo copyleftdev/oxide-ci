@@ -52,14 +52,14 @@ impl PgAgentRepository {
 
     fn arch_to_str(arch: &Arch) -> &'static str {
         match arch {
-            Arch::X86_64 => "x86_64",
-            Arch::Aarch64 => "aarch64",
+            Arch::X86_64 => "amd64",
+            Arch::Aarch64 => "arm64",
         }
     }
 
     fn str_to_arch(s: &str) -> Arch {
         match s {
-            "aarch64" => Arch::Aarch64,
+            "arm64" => Arch::Aarch64,
             _ => Arch::X86_64,
         }
     }
@@ -67,8 +67,7 @@ impl PgAgentRepository {
     fn row_to_agent(&self, r: &sqlx::postgres::PgRow) -> Result<Agent> {
         let capabilities: Vec<Capability> = serde_json::from_value(r.get("capabilities"))
             .map_err(|e| Error::Serialization(e.to_string()))?;
-        let system_metrics: Option<SystemMetrics> = r
-            .get::<Option<serde_json::Value>, _>("system_metrics")
+        let system_metrics: Option<SystemMetrics> = r.get::<Option<serde_json::Value>, _>("system_metrics")
             .map(serde_json::from_value)
             .transpose()
             .map_err(|e| Error::Serialization(e.to_string()))?;
@@ -85,9 +84,7 @@ impl PgAgentRepository {
             capabilities,
             max_concurrent_jobs: r.get::<i32, _>("max_concurrent_jobs") as u32,
             status: Self::str_to_status(&status_str),
-            current_run_id: r
-                .get::<Option<uuid::Uuid>, _>("current_run_id")
-                .map(oxide_core::ids::RunId::from_uuid),
+            current_run_id: r.get::<Option<uuid::Uuid>, _>("current_run_id").map(oxide_core::ids::RunId::from_uuid),
             system_metrics,
             registered_at: r.get("registered_at"),
             last_heartbeat_at: r.get("last_heartbeat_at"),
@@ -100,9 +97,7 @@ impl AgentRepository for PgAgentRepository {
     async fn register(&self, agent: &Agent) -> Result<AgentId> {
         let capabilities_json = serde_json::to_value(&agent.capabilities)
             .map_err(|e| Error::Serialization(e.to_string()))?;
-        let metrics_json = agent
-            .system_metrics
-            .as_ref()
+        let metrics_json = agent.system_metrics.as_ref()
             .map(serde_json::to_value)
             .transpose()
             .map_err(|e| Error::Serialization(e.to_string()))?;
@@ -158,9 +153,7 @@ impl AgentRepository for PgAgentRepository {
     async fn update(&self, agent: &Agent) -> Result<()> {
         let capabilities_json = serde_json::to_value(&agent.capabilities)
             .map_err(|e| Error::Serialization(e.to_string()))?;
-        let metrics_json = agent
-            .system_metrics
-            .as_ref()
+        let metrics_json = agent.system_metrics.as_ref()
             .map(serde_json::to_value)
             .transpose()
             .map_err(|e| Error::Serialization(e.to_string()))?;
@@ -181,13 +174,11 @@ impl AgentRepository for PgAgentRepository {
     }
 
     async fn heartbeat(&self, id: AgentId) -> Result<()> {
-        sqlx::query(
-            "UPDATE agents SET last_heartbeat_at = NOW(), updated_at = NOW() WHERE id = $1",
-        )
-        .bind(id.as_uuid())
-        .execute(&self.pool)
-        .await
-        .map_err(|e| Error::Database(e.to_string()))?;
+        sqlx::query("UPDATE agents SET last_heartbeat_at = NOW(), updated_at = NOW() WHERE id = $1")
+            .bind(id.as_uuid())
+            .execute(&self.pool)
+            .await
+            .map_err(|e| Error::Database(e.to_string()))?;
         Ok(())
     }
 

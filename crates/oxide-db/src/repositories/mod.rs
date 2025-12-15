@@ -1,9 +1,9 @@
 //! Repository implementations for PostgreSQL.
 
-mod agent;
 mod pipeline;
 mod run;
+mod agent;
 
-pub use agent::PgAgentRepository;
 pub use pipeline::PgPipelineRepository;
 pub use run::PgRunRepository;
+pub use agent::PgAgentRepository;

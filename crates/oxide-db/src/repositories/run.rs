@@ -8,11 +8,13 @@ use oxide_core::{Error, Result};
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 
+/// PostgreSQL implementation of RunRepository.
 pub struct PgRunRepository {
     pool: PgPool,
 }
 
 impl PgRunRepository {
+    /// Create a new PgRunRepository.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -31,6 +33,7 @@ impl PgRunRepository {
 
     fn str_to_status(s: &str) -> RunStatus {
         match s {
+            "queued" => RunStatus::Queued,
             "running" => RunStatus::Running,
             "success" => RunStatus::Success,
             "failure" => RunStatus::Failure,
@@ -45,6 +48,7 @@ impl PgRunRepository {
         let trigger: TriggerInfo = serde_json::from_value(r.get("trigger"))
             .map_err(|e| Error::Serialization(e.to_string()))?;
         let status_str: String = r.get("status");
+
         Ok(Run {
             id: RunId::from_uuid(r.get::<uuid::Uuid, _>("id")),
             pipeline_id: PipelineId::from_uuid(r.get::<uuid::Uuid, _>("pipeline_id")),
@@ -68,51 +72,57 @@ impl PgRunRepository {
 #[async_trait]
 impl RunRepository for PgRunRepository {
     async fn create(&self, run: &Run) -> Result<RunId> {
-        let trigger_json =
-            serde_json::to_value(&run.trigger).map_err(|e| Error::Serialization(e.to_string()))?;
-        sqlx::query("INSERT INTO runs (id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)")
-            .bind(run.id.as_uuid())
-            .bind(run.pipeline_id.as_uuid())
-            .bind(run.run_number as i32)
-            .bind(Self::status_to_str(&run.status))
-            .bind(&trigger_json)
-            .bind(&run.git_ref)
-            .bind(&run.git_sha)
-            .bind(run.queued_at)
-            .bind(run.started_at)
-            .bind(run.completed_at)
-            .bind(run.duration_ms.map(|d| d as i64))
-            .execute(&self.pool)
-            .await
-            .map_err(|e| Error::Database(e.to_string()))?;
+        let trigger_json = serde_json::to_value(&run.trigger)
+            .map_err(|e| Error::Serialization(e.to_string()))?;
+
+        sqlx::query(
+            r#"INSERT INTO runs (id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#
+        )
+        .bind(run.id.as_uuid())
+        .bind(run.pipeline_id.as_uuid())
+        .bind(run.run_number as i32)
+        .bind(Self::status_to_str(&run.status))
+        .bind(&trigger_json)
+        .bind(&run.git_ref)
+        .bind(&run.git_sha)
+        .bind(run.queued_at)
+        .bind(run.started_at)
+        .bind(run.completed_at)
+        .bind(run.duration_ms.map(|d| d as i64))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Error::Database(e.to_string()))?;
+
         Ok(run.id)
     }
 
     async fn get(&self, id: RunId) -> Result<Option<Run>> {
-        let row = sqlx::query("SELECT id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms FROM runs WHERE id = $1")
-            .bind(id.as_uuid())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| Error::Database(e.to_string()))?;
+        let row = sqlx::query(
+            "SELECT id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms FROM runs WHERE id = $1"
+        )
+        .bind(id.as_uuid())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Error::Database(e.to_string()))?;
+
         match row {
             Some(r) => Ok(Some(self.row_to_run(&r)?)),
             None => Ok(None),
         }
     }
 
-    async fn get_by_pipeline(
-        &self,
-        pipeline_id: PipelineId,
-        limit: u32,
-        offset: u32,
-    ) -> Result<Vec<Run>> {
-        let rows = sqlx::query("SELECT id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms FROM runs WHERE pipeline_id = $1 ORDER BY run_number DESC LIMIT $2 OFFSET $3")
-            .bind(pipeline_id.as_uuid())
-            .bind(limit as i64)
-            .bind(offset as i64)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Error::Database(e.to_string()))?;
+    async fn get_by_pipeline(&self, pipeline_id: PipelineId, limit: u32, offset: u32) -> Result<Vec<Run>> {
+        let rows = sqlx::query(
+            "SELECT id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms FROM runs WHERE pipeline_id = $1 ORDER BY run_number DESC LIMIT $2 OFFSET $3"
+        )
+        .bind(pipeline_id.as_uuid())
+        .bind(limit as i64)
+        .bind(offset as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Error::Database(e.to_string()))?;
+
         rows.iter().map(|r| self.row_to_run(r)).collect()
     }
 
@@ -122,31 +132,39 @@ impl RunRepository for PgRunRepository {
             .fetch_one(&self.pool)
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
+
         Ok(row.get::<i32, _>("next_number") as u32)
     }
 
     async fn update(&self, run: &Run) -> Result<()> {
-        let trigger_json =
-            serde_json::to_value(&run.trigger).map_err(|e| Error::Serialization(e.to_string()))?;
-        sqlx::query("UPDATE runs SET status = $2, trigger = $3, started_at = $4, completed_at = $5, duration_ms = $6, updated_at = NOW() WHERE id = $1")
-            .bind(run.id.as_uuid())
-            .bind(Self::status_to_str(&run.status))
-            .bind(&trigger_json)
-            .bind(run.started_at)
-            .bind(run.completed_at)
-            .bind(run.duration_ms.map(|d| d as i64))
-            .execute(&self.pool)
-            .await
-            .map_err(|e| Error::Database(e.to_string()))?;
+        let trigger_json = serde_json::to_value(&run.trigger)
+            .map_err(|e| Error::Serialization(e.to_string()))?;
+
+        sqlx::query(
+            "UPDATE runs SET status = $2, trigger = $3, started_at = $4, completed_at = $5, duration_ms = $6, updated_at = NOW() WHERE id = $1"
+        )
+        .bind(run.id.as_uuid())
+        .bind(Self::status_to_str(&run.status))
+        .bind(&trigger_json)
+        .bind(run.started_at)
+        .bind(run.completed_at)
+        .bind(run.duration_ms.map(|d| d as i64))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Error::Database(e.to_string()))?;
+
         Ok(())
     }
 
     async fn get_queued(&self, limit: u32) -> Result<Vec<Run>> {
-        let rows = sqlx::query("SELECT id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms FROM runs WHERE status = 'queued' ORDER BY queued_at ASC LIMIT $1")
-            .bind(limit as i64)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Error::Database(e.to_string()))?;
+        let rows = sqlx::query(
+            "SELECT id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms FROM runs WHERE status = 'queued' ORDER BY queued_at ASC LIMIT $1"
+        )
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Error::Database(e.to_string()))?;
+
         rows.iter().map(|r| self.row_to_run(r)).collect()
     }
 }
