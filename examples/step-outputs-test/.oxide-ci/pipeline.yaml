@@ -1,0 +1,52 @@
+# Test pipeline for step outputs and variable interpolation
+name: step-outputs-test
+version: "1.0"
+
+variables:
+  PROJECT_NAME: oxide-ci
+  BUILD_TYPE: release
+
+stages:
+  - name: setup
+    steps:
+      - name: generate-version
+        run: |
+          echo "Generating version..."
+          VERSION="1.0.$(date +%s)"
+          echo "version=$VERSION" >> $OXIDE_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: detect-changes
+        run: |
+          echo "Detecting changes..."
+          CHANGED_DIRS="src,tests,docs"
+          echo "changed_dirs=$CHANGED_DIRS" >> $OXIDE_OUTPUT
+          echo "build_needed=true" >> $OXIDE_OUTPUT
+          echo "Changed directories: $CHANGED_DIRS"
+
+  - name: build
+    steps:
+      - name: show-config
+        run: |
+          echo "=== Build Configuration ==="
+          echo "Project: ${{ PROJECT_NAME }}"
+          echo "Build type: ${{ BUILD_TYPE }}"
+          echo "Version: ${{ steps.generate-version.outputs.version }}"
+          echo "Changed: ${{ steps.detect-changes.outputs.changed_dirs }}"
+
+      - name: compile
+        run: |
+          echo "Building ${{ PROJECT_NAME }} v${{ steps.generate-version.outputs.version }}..."
+          sleep 0.2
+          echo "Build complete!"
+          echo "artifact=target/${{ BUILD_TYPE }}/${{ PROJECT_NAME }}" >> $OXIDE_OUTPUT
+
+  - name: report
+    steps:
+      - name: summary
+        run: |
+          echo "=== Build Summary ==="
+          echo "Project: ${{ PROJECT_NAME }}"
+          echo "Version: ${{ steps.generate-version.outputs.version }}"
+          echo "Artifact: ${{ steps.compile.outputs.artifact }}"
+          echo "Build needed: ${{ steps.detect-changes.outputs.build_needed }}"

@@ -1,12 +1,118 @@
 //! Local pipeline executor for running pipelines without a server.
+//!
+//! Supports:
+//! - Variable interpolation: `${{ variable }}`, `${{ env.VAR }}`
+//! - Step outputs: `${{ steps.name.outputs.key }}`
+//! - Matrix values: `${{ matrix.key }}`
+//! - Output capture via `$OXIDE_OUTPUT` file
 
 use console::style;
 use oxide_core::pipeline::{PipelineDefinition, StageDefinition, StepDefinition};
+use regex::Regex;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+
+/// Execution context passed through the pipeline.
+///
+/// Tracks variables, step outputs, and matrix values for interpolation.
+#[derive(Debug, Clone)]
+pub struct ExecutionContext {
+    /// Pipeline and stage variables
+    pub variables: HashMap<String, String>,
+    /// Step outputs: "step_name.output_key" -> value
+    pub outputs: HashMap<String, String>,
+    /// Matrix values for current job
+    pub matrix: HashMap<String, String>,
+    /// Working directory
+    pub workspace: PathBuf,
+}
+
+impl ExecutionContext {
+    /// Create a new execution context.
+    pub fn new(workspace: PathBuf) -> Self {
+        Self {
+            variables: HashMap::new(),
+            outputs: HashMap::new(),
+            matrix: HashMap::new(),
+            workspace,
+        }
+    }
+
+    /// Interpolate variables in a string.
+    ///
+    /// Supports:
+    /// - `${{ variable }}` - direct variable lookup
+    /// - `${{ env.VAR }}` - environment variable
+    /// - `${{ matrix.key }}` - matrix value
+    /// - `${{ steps.name.outputs.key }}` - step output
+    pub fn interpolate(&self, input: &str) -> String {
+        let re = Regex::new(r"\$\{\{\s*([^}]+)\s*\}\}").unwrap();
+        
+        re.replace_all(input, |caps: &regex::Captures| {
+            let expr = caps.get(1).map_or("", |m| m.as_str()).trim();
+            self.resolve_expression(expr)
+        })
+        .to_string()
+    }
+
+    /// Resolve a single expression like "env.VAR" or "steps.name.outputs.key".
+    fn resolve_expression(&self, expr: &str) -> String {
+        // Handle env.VAR
+        if let Some(var_name) = expr.strip_prefix("env.") {
+            return self.variables.get(var_name)
+                .cloned()
+                .or_else(|| std::env::var(var_name).ok())
+                .unwrap_or_default();
+        }
+
+        // Handle matrix.key
+        if let Some(key) = expr.strip_prefix("matrix.") {
+            return self.matrix.get(key).cloned().unwrap_or_default();
+        }
+
+        // Handle steps.name.outputs.key
+        if let Some(rest) = expr.strip_prefix("steps.") {
+            if let Some(outputs_idx) = rest.find(".outputs.") {
+                let step_name = &rest[..outputs_idx];
+                let output_key = &rest[outputs_idx + 9..]; // ".outputs." is 9 chars
+                let lookup_key = format!("{}.{}", step_name, output_key);
+                return self.outputs.get(&lookup_key).cloned().unwrap_or_default();
+            }
+        }
+
+        // Direct variable lookup
+        self.variables.get(expr).cloned().unwrap_or_default()
+    }
+
+    /// Set a step output.
+    pub fn set_output(&mut self, step_name: &str, key: &str, value: String) {
+        let lookup_key = format!("{}.{}", step_name, key);
+        self.outputs.insert(lookup_key, value);
+    }
+
+    /// Parse outputs from OXIDE_OUTPUT file content.
+    ///
+    /// Format: `key=value` or `key<<EOF\nvalue\nEOF`
+    pub fn parse_outputs(&mut self, step_name: &str, content: &str) {
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
+            if let Some(eq_pos) = line.find('=') {
+                let key = line[..eq_pos].trim();
+                let value = line[eq_pos + 1..].trim();
+                if !key.is_empty() {
+                    self.set_output(step_name, key, value.to_string());
+                }
+            }
+        }
+    }
+}
 
 /// Result of a step execution.
 #[derive(Debug)]
@@ -61,6 +167,15 @@ pub async fn execute_pipeline(
     let mut stages_results = Vec::new();
     let mut all_success = true;
 
+    // Initialize execution context
+    let mut ctx = ExecutionContext::new(config.workspace.clone());
+    ctx.variables = config.variables.clone();
+    
+    // Merge pipeline variables
+    for (k, v) in &definition.variables {
+        ctx.variables.insert(k.clone(), v.clone());
+    }
+
     println!(
         "\n{} Running pipeline: {}",
         style("▶").cyan().bold(),
@@ -72,12 +187,6 @@ pub async fn execute_pipeline(
         definition.timeout_minutes
     );
 
-    // Merge pipeline variables with config variables
-    let mut variables = config.variables.clone();
-    for (k, v) in &definition.variables {
-        variables.insert(k.clone(), v.clone());
-    }
-
     for stage in &definition.stages {
         // Filter stages if specified
         if let Some(filter) = stage_filter {
@@ -86,7 +195,7 @@ pub async fn execute_pipeline(
             }
         }
 
-        let stage_result = execute_stage(stage, &config.workspace, &variables, config.verbose).await?;
+        let stage_result = execute_stage(stage, &mut ctx, config.verbose).await?;
         let success = stage_result.success;
         stages_results.push((stage.name.clone(), stage_result));
 
@@ -124,8 +233,7 @@ pub async fn execute_pipeline(
 /// Execute a single stage.
 async fn execute_stage(
     stage: &StageDefinition,
-    workspace: &Path,
-    variables: &HashMap<String, String>,
+    ctx: &mut ExecutionContext,
     verbose: bool,
 ) -> Result<StageResult, Box<dyn std::error::Error>> {
     println!(
@@ -137,14 +245,16 @@ async fn execute_stage(
     let mut step_results = Vec::new();
     let mut all_success = true;
 
+    // Save original variables to restore after stage
+    let original_vars = ctx.variables.clone();
+    
     // Merge stage variables
-    let mut stage_vars = variables.clone();
     for (k, v) in &stage.variables {
-        stage_vars.insert(k.clone(), v.clone());
+        ctx.variables.insert(k.clone(), v.clone());
     }
 
     for (idx, step) in stage.steps.iter().enumerate() {
-        let step_result = execute_step(step, workspace, &stage_vars, verbose, idx + 1, stage.steps.len()).await?;
+        let step_result = execute_step(step, ctx, verbose, idx + 1, stage.steps.len()).await?;
         let success = step_result.success;
         step_results.push((step.name.clone(), step_result));
 
@@ -153,6 +263,9 @@ async fn execute_stage(
             break;
         }
     }
+    
+    // Restore original variables (but keep outputs)
+    ctx.variables = original_vars;
 
     if all_success {
         println!(
@@ -177,8 +290,7 @@ async fn execute_stage(
 /// Execute a single step.
 async fn execute_step(
     step: &StepDefinition,
-    workspace: &Path,
-    variables: &HashMap<String, String>,
+    ctx: &mut ExecutionContext,
     _verbose: bool,
     step_num: usize,
     total_steps: usize,
@@ -223,27 +335,37 @@ async fn execute_step(
         style(&step.name).bold()
     );
 
-    // Determine working directory
+    // Interpolate the script with context variables
+    let script = ctx.interpolate(script);
+
+    // Determine working directory (also interpolate)
     let work_dir = step
         .working_directory
         .as_ref()
-        .map(|d| workspace.join(d))
-        .unwrap_or_else(|| workspace.to_path_buf());
+        .map(|d| PathBuf::from(ctx.interpolate(d)))
+        .unwrap_or_else(|| ctx.workspace.clone());
+
+    // Create temp file for step outputs
+    let output_file = work_dir.join(format!(".oxide_output_{}", step.name.replace(' ', "_")));
 
     // Build command
     let shell = &step.shell;
     let mut cmd = Command::new(shell);
-    cmd.arg("-c").arg(script);
+    cmd.arg("-c").arg(&script);
     cmd.current_dir(&work_dir);
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    // Set environment variables
-    for (k, v) in variables {
+    // Set OXIDE_OUTPUT environment variable
+    cmd.env("OXIDE_OUTPUT", &output_file);
+
+    // Set environment variables from context
+    for (k, v) in &ctx.variables {
         cmd.env(k, v);
     }
+    // Set step-specific variables (interpolated)
     for (k, v) in &step.variables {
-        cmd.env(k, v);
+        cmd.env(k, ctx.interpolate(v));
     }
 
     // Spawn process
@@ -277,6 +399,15 @@ async fn execute_step(
     let duration_ms = start.elapsed().as_millis() as u64;
     let exit_code = status.code().unwrap_or(-1);
     let success = status.success();
+
+    // Parse step outputs from OXIDE_OUTPUT file
+    if output_file.exists() {
+        if let Ok(content) = std::fs::read_to_string(&output_file) {
+            ctx.parse_outputs(&step.name, &content);
+        }
+        // Clean up the output file
+        let _ = std::fs::remove_file(&output_file);
+    }
 
     if success {
         println!(
