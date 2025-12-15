@@ -1,0 +1,47 @@
+# TypeScript + Playwright E2E Pipeline
+# Real example that installs deps, typechecks, and runs Playwright tests
+
+name: typescript-playwright
+version: "1.0"
+
+variables:
+  CI: "true"
+  NODE_ENV: test
+
+stages:
+  - name: install
+    steps:
+      - name: node-version
+        run: node --version && npm --version
+
+      - name: install-deps
+        run: npm install
+        working_directory: /home/ops/Project/oxide-ci/examples/typescript-playwright
+
+      - name: install-browsers
+        run: npx playwright install chromium
+        working_directory: /home/ops/Project/oxide-ci/examples/typescript-playwright
+
+  - name: quality
+    steps:
+      - name: typecheck
+        run: npx tsc --noEmit
+        working_directory: /home/ops/Project/oxide-ci/examples/typescript-playwright
+
+      - name: show-structure
+        run: |
+          echo "=== Project Structure ==="
+          find . -type f -name "*.ts" | head -20
+        working_directory: /home/ops/Project/oxide-ci/examples/typescript-playwright
+
+  - name: test
+    steps:
+      - name: playwright-test
+        run: npx playwright test --reporter=list
+        working_directory: /home/ops/Project/oxide-ci/examples/typescript-playwright
+
+      - name: show-results
+        run: |
+          echo "=== Test Results ==="
+          cat test-results/results.json 2>/dev/null | head -50 || echo "Results file not found"
+        working_directory: /home/ops/Project/oxide-ci/examples/typescript-playwright

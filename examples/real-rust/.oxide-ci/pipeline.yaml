@@ -1,0 +1,42 @@
+# Real Rust Pipeline - Actually compiles code
+name: real-rust
+version: "1.0"
+
+stages:
+  - name: check
+    steps:
+      - name: rust-version
+        run: rustc --version && cargo --version
+
+      - name: workspace-info
+        run: |
+          echo "Workspace: $(pwd)"
+          ls -la Cargo.toml 2>/dev/null || echo "No Cargo.toml in current dir"
+
+  - name: build
+    steps:
+      - name: build-oxide-core
+        run: cargo build -p oxide-core --release
+        working_directory: /home/ops/Project/oxide-ci
+
+      - name: build-oxide-cli
+        run: cargo build -p oxide-cli --release
+        working_directory: /home/ops/Project/oxide-ci
+
+  - name: test
+    steps:
+      - name: test-oxide-core
+        run: cargo test -p oxide-core
+        working_directory: /home/ops/Project/oxide-ci
+
+  - name: verify
+    steps:
+      - name: binary-exists
+        run: |
+          ls -la target/release/oxide
+          file target/release/oxide
+        working_directory: /home/ops/Project/oxide-ci
+
+      - name: run-cli-help
+        run: ./target/release/oxide --help
+        working_directory: /home/ops/Project/oxide-ci
