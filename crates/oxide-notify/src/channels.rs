@@ -264,19 +264,27 @@ impl NotificationFilter {
     /// Check if a notification matches this filter.
     pub fn matches(&self, pipeline: Option<&str>, branch: Option<&str>, env: Option<&str>) -> bool {
         let pipeline_match = self.pipelines.is_empty()
-            || pipeline.map(|p| self.pipelines.iter().any(|f| f == p)).unwrap_or(true);
+            || pipeline
+                .map(|p| self.pipelines.iter().any(|f| f == p))
+                .unwrap_or(true);
 
         let branch_match = self.branches.is_empty()
-            || branch.map(|b| self.branches.iter().any(|f| {
-                if f.ends_with('*') {
-                    b.starts_with(&f[..f.len()-1])
-                } else {
-                    b == f
-                }
-            })).unwrap_or(true);
+            || branch
+                .map(|b| {
+                    self.branches.iter().any(|f| {
+                        if f.ends_with('*') {
+                            b.starts_with(&f[..f.len() - 1])
+                        } else {
+                            b == f
+                        }
+                    })
+                })
+                .unwrap_or(true);
 
         let env_match = self.environments.is_empty()
-            || env.map(|e| self.environments.contains(&e.to_string())).unwrap_or(true);
+            || env
+                .map(|e| self.environments.contains(&e.to_string()))
+                .unwrap_or(true);
 
         pipeline_match && branch_match && env_match
     }

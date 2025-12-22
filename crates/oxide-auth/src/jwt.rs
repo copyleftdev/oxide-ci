@@ -55,7 +55,11 @@ pub struct OidcClaims {
 
 impl OidcClaims {
     /// Create a new builder for OIDC claims.
-    pub fn builder(issuer: impl Into<String>, subject: impl Into<String>, audience: impl Into<String>) -> OidcClaimsBuilder {
+    pub fn builder(
+        issuer: impl Into<String>,
+        subject: impl Into<String>,
+        audience: impl Into<String>,
+    ) -> OidcClaimsBuilder {
         OidcClaimsBuilder::new(issuer, subject, audience)
     }
 }
@@ -82,7 +86,11 @@ pub struct OidcClaimsBuilder {
 }
 
 impl OidcClaimsBuilder {
-    pub fn new(issuer: impl Into<String>, subject: impl Into<String>, audience: impl Into<String>) -> Self {
+    pub fn new(
+        issuer: impl Into<String>,
+        subject: impl Into<String>,
+        audience: impl Into<String>,
+    ) -> Self {
         Self {
             issuer: issuer.into(),
             subject: subject.into(),
@@ -253,7 +261,11 @@ pub struct JwtVerifier {
 
 impl JwtVerifier {
     /// Create a new JWT verifier with RS256 algorithm.
-    pub fn new_rs256(public_key_pem: &[u8], issuer: &str, audience: &str) -> Result<Self, JwtError> {
+    pub fn new_rs256(
+        public_key_pem: &[u8],
+        issuer: &str,
+        audience: &str,
+    ) -> Result<Self, JwtError> {
         let decoding_key = DecodingKey::from_rsa_pem(public_key_pem)
             .map_err(|e| JwtError::InvalidKey(e.to_string()))?;
 
@@ -268,7 +280,11 @@ impl JwtVerifier {
     }
 
     /// Create a new JWT verifier with ES256 algorithm.
-    pub fn new_es256(public_key_pem: &[u8], issuer: &str, audience: &str) -> Result<Self, JwtError> {
+    pub fn new_es256(
+        public_key_pem: &[u8],
+        issuer: &str,
+        audience: &str,
+    ) -> Result<Self, JwtError> {
         let decoding_key = DecodingKey::from_ec_pem(public_key_pem)
             .map_err(|e| JwtError::InvalidKey(e.to_string()))?;
 

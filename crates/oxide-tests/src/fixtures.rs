@@ -1,11 +1,11 @@
 //! Test fixtures for creating sample data.
 
+use chrono::Utc;
 use oxide_core::ids::{PipelineId, RunId, StageId, StepId};
 use oxide_core::pipeline::{
     Pipeline, PipelineDefinition, StageDefinition, StepDefinition, TriggerConfig, TriggerType,
 };
 use oxide_core::run::{Run, RunStatus, Stage, StageStatus, Step, StepStatus, TriggerInfo};
-use chrono::Utc;
 use std::collections::HashMap;
 
 /// Factory for creating test pipelines.
@@ -332,17 +332,17 @@ mod tests {
     #[test]
     fn test_run_fixtures() {
         let pipeline = PipelineFixture::simple();
-        
+
         let queued = RunFixture::queued(&pipeline);
         assert_eq!(queued.status, RunStatus::Queued);
-        
+
         let running = RunFixture::running(&pipeline);
         assert_eq!(running.status, RunStatus::Running);
-        
+
         let success = RunFixture::success(&pipeline);
         assert_eq!(success.status, RunStatus::Success);
         assert!(success.completed_at.is_some());
-        
+
         let failed = RunFixture::failed(&pipeline);
         assert_eq!(failed.status, RunStatus::Failure);
     }

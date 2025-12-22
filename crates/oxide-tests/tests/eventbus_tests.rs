@@ -70,7 +70,10 @@ async fn test_subscribe_and_receive() {
         license_id: None,
     });
 
-    ctx.event_bus.publish(event).await.expect("Failed to publish");
+    ctx.event_bus
+        .publish(event)
+        .await
+        .expect("Failed to publish");
 
     // Receive with timeout
     let received = tokio::time::timeout(Duration::from_secs(5), stream.next())
@@ -135,8 +138,14 @@ async fn test_multiple_event_types() {
         started_at: chrono::Utc::now(),
     });
 
-    ctx.event_bus.publish(queued).await.expect("Failed to publish");
-    ctx.event_bus.publish(started).await.expect("Failed to publish");
+    ctx.event_bus
+        .publish(queued)
+        .await
+        .expect("Failed to publish");
+    ctx.event_bus
+        .publish(started)
+        .await
+        .expect("Failed to publish");
 
     let metrics = ctx.event_bus.metrics().snapshot();
     assert_eq!(metrics.messages_published, 2);

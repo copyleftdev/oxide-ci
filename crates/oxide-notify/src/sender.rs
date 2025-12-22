@@ -320,6 +320,11 @@ mod tests {
         payload.status = Some("success".to_string());
         let msg = sender.build_message(&payload);
 
-        assert!(msg["attachments"][0]["color"].as_str().unwrap().contains("36a64f"));
+        assert!(
+            msg["attachments"][0]["color"]
+                .as_str()
+                .unwrap()
+                .contains("36a64f")
+        );
     }
 }

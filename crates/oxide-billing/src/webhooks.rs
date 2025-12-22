@@ -82,9 +82,18 @@ pub struct SubscriptionEventData {
 /// Webhook handler trait.
 #[async_trait::async_trait]
 pub trait WebhookHandler: Send + Sync {
-    async fn on_subscription_created(&self, data: SubscriptionEventData) -> Result<(), WebhookError>;
-    async fn on_subscription_updated(&self, data: SubscriptionEventData) -> Result<(), WebhookError>;
-    async fn on_subscription_deleted(&self, data: SubscriptionEventData) -> Result<(), WebhookError>;
+    async fn on_subscription_created(
+        &self,
+        data: SubscriptionEventData,
+    ) -> Result<(), WebhookError>;
+    async fn on_subscription_updated(
+        &self,
+        data: SubscriptionEventData,
+    ) -> Result<(), WebhookError>;
+    async fn on_subscription_deleted(
+        &self,
+        data: SubscriptionEventData,
+    ) -> Result<(), WebhookError>;
     async fn on_payment_succeeded(&self, data: PaymentSucceededData) -> Result<(), WebhookError>;
     async fn on_payment_failed(&self, data: PaymentFailedData) -> Result<(), WebhookError>;
 }
@@ -124,20 +133,28 @@ pub async fn process_webhook<H: WebhookHandler>(
     }
 }
 
-fn parse_subscription_data(data: &serde_json::Value) -> Result<SubscriptionEventData, WebhookError> {
-    let obj = data.get("object").ok_or_else(|| WebhookError::ParseError("Missing object".into()))?;
+fn parse_subscription_data(
+    data: &serde_json::Value,
+) -> Result<SubscriptionEventData, WebhookError> {
+    let obj = data
+        .get("object")
+        .ok_or_else(|| WebhookError::ParseError("Missing object".into()))?;
 
     Ok(SubscriptionEventData {
         subscription_id: obj["id"].as_str().unwrap_or_default().to_string(),
         customer_id: obj["customer"].as_str().unwrap_or_default().to_string(),
         status: obj["status"].as_str().unwrap_or_default().to_string(),
-        plan_id: obj["items"]["data"][0]["price"]["id"].as_str().map(|s| s.to_string()),
+        plan_id: obj["items"]["data"][0]["price"]["id"]
+            .as_str()
+            .map(|s| s.to_string()),
         cancel_at_period_end: obj["cancel_at_period_end"].as_bool().unwrap_or(false),
     })
 }
 
 fn parse_payment_succeeded(data: &serde_json::Value) -> Result<PaymentSucceededData, WebhookError> {
-    let obj = data.get("object").ok_or_else(|| WebhookError::ParseError("Missing object".into()))?;
+    let obj = data
+        .get("object")
+        .ok_or_else(|| WebhookError::ParseError("Missing object".into()))?;
 
     Ok(PaymentSucceededData {
         payment_intent_id: obj["id"].as_str().unwrap_or_default().to_string(),
@@ -149,7 +166,9 @@ fn parse_payment_succeeded(data: &serde_json::Value) -> Result<PaymentSucceededD
 }
 
 fn parse_payment_failed(data: &serde_json::Value) -> Result<PaymentFailedData, WebhookError> {
-    let obj = data.get("object").ok_or_else(|| WebhookError::ParseError("Missing object".into()))?;
+    let obj = data
+        .get("object")
+        .ok_or_else(|| WebhookError::ParseError("Missing object".into()))?;
     let error = obj.get("last_payment_error");
 
     Ok(PaymentFailedData {
@@ -157,13 +176,21 @@ fn parse_payment_failed(data: &serde_json::Value) -> Result<PaymentFailedData, W
         customer_id: obj["customer"].as_str().unwrap_or_default().to_string(),
         amount: obj["amount"].as_i64().unwrap_or(0),
         currency: obj["currency"].as_str().unwrap_or("usd").to_string(),
-        failure_code: error.and_then(|e| e["code"].as_str()).map(|s| s.to_string()),
-        failure_message: error.and_then(|e| e["message"].as_str()).map(|s| s.to_string()),
+        failure_code: error
+            .and_then(|e| e["code"].as_str())
+            .map(|s| s.to_string()),
+        failure_message: error
+            .and_then(|e| e["message"].as_str())
+            .map(|s| s.to_string()),
     })
 }
 
 /// Verify Stripe webhook signature.
-pub fn verify_signature(_payload: &[u8], signature: &str, secret: &str) -> Result<(), WebhookError> {
+pub fn verify_signature(
+    _payload: &[u8],
+    signature: &str,
+    secret: &str,
+) -> Result<(), WebhookError> {
     // In production, use proper HMAC verification
     // For now, just check that signature header exists
     if signature.is_empty() || secret.is_empty() {

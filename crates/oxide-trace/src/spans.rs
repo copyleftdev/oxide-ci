@@ -1,6 +1,6 @@
 //! Span creation for CI/CD operations.
 
-use tracing::{span, Level, Span};
+use tracing::{Level, Span, span};
 
 /// CI/CD span attributes following OpenTelemetry semantic conventions.
 #[derive(Default)]
@@ -19,7 +19,6 @@ pub struct CiAttributes {
     pub git_sha: Option<String>,
     pub author: Option<String>,
 }
-
 
 impl CiAttributes {
     pub fn new() -> Self {
@@ -59,7 +58,12 @@ impl CiAttributes {
         self
     }
 
-    pub fn vcs(mut self, repo: impl Into<String>, git_ref: impl Into<String>, sha: impl Into<String>) -> Self {
+    pub fn vcs(
+        mut self,
+        repo: impl Into<String>,
+        git_ref: impl Into<String>,
+        sha: impl Into<String>,
+    ) -> Self {
         self.repository = Some(repo.into());
         self.git_ref = Some(git_ref.into());
         self.git_sha = Some(sha.into());
@@ -135,11 +139,7 @@ pub fn cache_span(operation: &str, key: &str) -> Span {
 
 /// Create a span for secret access.
 pub fn secret_span(secret_id: &str) -> Span {
-    span!(
-        Level::DEBUG,
-        "secret.access",
-        secret.id = secret_id,
-    )
+    span!(Level::DEBUG, "secret.access", secret.id = secret_id,)
 }
 
 #[cfg(test)]

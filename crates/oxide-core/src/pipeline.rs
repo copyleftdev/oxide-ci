@@ -62,17 +62,11 @@ pub struct ScheduleConfig {
 #[serde(untagged)]
 pub enum TriggerConfig {
     /// Shorthand push trigger: `- push:` or `- push: { branches: [...] }`
-    Push {
-        push: Option<TriggerFilter>,
-    },
+    Push { push: Option<TriggerFilter> },
     /// Shorthand pull_request trigger
-    PullRequest {
-        pull_request: Option<TriggerFilter>,
-    },
+    PullRequest { pull_request: Option<TriggerFilter> },
     /// Shorthand schedule trigger
-    Schedule {
-        schedule: Option<ScheduleConfig>,
-    },
+    Schedule { schedule: Option<ScheduleConfig> },
     /// Explicit type format: `- type: push`
     Explicit {
         #[serde(rename = "type")]
@@ -121,9 +115,10 @@ impl TriggerConfig {
             TriggerConfig::Push { push } => {
                 push.as_ref().map(|f| f.branches.as_slice()).unwrap_or(&[])
             }
-            TriggerConfig::PullRequest { pull_request } => {
-                pull_request.as_ref().map(|f| f.branches.as_slice()).unwrap_or(&[])
-            }
+            TriggerConfig::PullRequest { pull_request } => pull_request
+                .as_ref()
+                .map(|f| f.branches.as_slice())
+                .unwrap_or(&[]),
             TriggerConfig::Schedule { .. } => &[],
             TriggerConfig::Explicit { branches, .. } => branches.as_slice(),
         }
@@ -135,9 +130,10 @@ impl TriggerConfig {
             TriggerConfig::Push { push } => {
                 push.as_ref().map(|f| f.paths.as_slice()).unwrap_or(&[])
             }
-            TriggerConfig::PullRequest { pull_request } => {
-                pull_request.as_ref().map(|f| f.paths.as_slice()).unwrap_or(&[])
-            }
+            TriggerConfig::PullRequest { pull_request } => pull_request
+                .as_ref()
+                .map(|f| f.paths.as_slice())
+                .unwrap_or(&[]),
             TriggerConfig::Schedule { .. } => &[],
             TriggerConfig::Explicit { paths, .. } => paths.as_slice(),
         }
@@ -146,12 +142,14 @@ impl TriggerConfig {
     /// Get paths_ignore filter.
     pub fn paths_ignore(&self) -> &[String] {
         match self {
-            TriggerConfig::Push { push } => {
-                push.as_ref().map(|f| f.paths_ignore.as_slice()).unwrap_or(&[])
-            }
-            TriggerConfig::PullRequest { pull_request } => {
-                pull_request.as_ref().map(|f| f.paths_ignore.as_slice()).unwrap_or(&[])
-            }
+            TriggerConfig::Push { push } => push
+                .as_ref()
+                .map(|f| f.paths_ignore.as_slice())
+                .unwrap_or(&[]),
+            TriggerConfig::PullRequest { pull_request } => pull_request
+                .as_ref()
+                .map(|f| f.paths_ignore.as_slice())
+                .unwrap_or(&[]),
             TriggerConfig::Schedule { .. } => &[],
             TriggerConfig::Explicit { paths_ignore, .. } => paths_ignore.as_slice(),
         }
@@ -160,12 +158,11 @@ impl TriggerConfig {
     /// Get tags filter.
     pub fn tags(&self) -> &[String] {
         match self {
-            TriggerConfig::Push { push } => {
-                push.as_ref().map(|f| f.tags.as_slice()).unwrap_or(&[])
-            }
-            TriggerConfig::PullRequest { pull_request } => {
-                pull_request.as_ref().map(|f| f.tags.as_slice()).unwrap_or(&[])
-            }
+            TriggerConfig::Push { push } => push.as_ref().map(|f| f.tags.as_slice()).unwrap_or(&[]),
+            TriggerConfig::PullRequest { pull_request } => pull_request
+                .as_ref()
+                .map(|f| f.tags.as_slice())
+                .unwrap_or(&[]),
             TriggerConfig::Schedule { .. } => &[],
             TriggerConfig::Explicit { tags, .. } => tags.as_slice(),
         }

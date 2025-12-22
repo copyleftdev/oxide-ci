@@ -176,9 +176,7 @@ impl NixEnvironment {
             )));
         }
 
-        let path = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Ok(PathBuf::from(path))
     }
 }
@@ -191,7 +189,9 @@ impl Environment for NixEnvironment {
         // Ensure workspace exists
         tokio::fs::create_dir_all(&self.workspace)
             .await
-            .map_err(|e| oxide_core::Error::Internal(format!("Failed to create workspace: {}", e)))?;
+            .map_err(|e| {
+                oxide_core::Error::Internal(format!("Failed to create workspace: {}", e))
+            })?;
 
         // Check if Nix is available
         if !Self::is_available().await {
@@ -203,27 +203,28 @@ impl Environment for NixEnvironment {
         // If using a flake, ensure it exists or can be fetched
         if let Some(ref flake) = self.config.flake
             && !flake.starts_with("github:")
-                && !flake.starts_with("git+")
-                && !flake.starts_with("path:")
-            {
-                // Local flake reference
-                let flake_path = if flake.starts_with('.') {
-                    self.workspace.join(flake.trim_start_matches('.').trim_start_matches('/'))
-                } else {
-                    self.workspace.join(flake)
-                };
+            && !flake.starts_with("git+")
+            && !flake.starts_with("path:")
+        {
+            // Local flake reference
+            let flake_path = if flake.starts_with('.') {
+                self.workspace
+                    .join(flake.trim_start_matches('.').trim_start_matches('/'))
+            } else {
+                self.workspace.join(flake)
+            };
 
-                // Check for flake.nix
-                let flake_file = if flake_path.is_dir() {
-                    flake_path.join("flake.nix")
-                } else {
-                    self.workspace.join("flake.nix")
-                };
+            // Check for flake.nix
+            let flake_file = if flake_path.is_dir() {
+                flake_path.join("flake.nix")
+            } else {
+                self.workspace.join("flake.nix")
+            };
 
-                if !flake_file.exists() {
-                    warn!(path = %flake_file.display(), "flake.nix not found");
-                }
+            if !flake_file.exists() {
+                warn!(path = %flake_file.display(), "flake.nix not found");
             }
+        }
 
         info!("Nix environment prepared");
         Ok(())
@@ -252,7 +253,9 @@ impl BinaryCacheConfig {
     pub fn nixos_cache() -> Self {
         Self {
             url: "https://cache.nixos.org".to_string(),
-            public_key: Some("cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=".to_string()),
+            public_key: Some(
+                "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=".to_string(),
+            ),
             priority: 40,
         }
     }
@@ -277,7 +280,11 @@ mod tests {
         let config = NixConfig::default();
         assert!(config.pure);
         assert!(config.sandbox);
-        assert!(config.substituters.contains(&"https://cache.nixos.org".to_string()));
+        assert!(
+            config
+                .substituters
+                .contains(&"https://cache.nixos.org".to_string())
+        );
     }
 
     #[test]

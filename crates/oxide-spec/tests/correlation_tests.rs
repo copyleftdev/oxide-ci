@@ -54,10 +54,10 @@ fn test_traceability_matrix() {
 #[test]
 fn test_schema_validation() {
     let validator = SpecValidator::new("../../spec").expect("Failed to load spec");
-    
+
     // Verify we loaded schemas from the spec
     println!("Loaded schemas from spec directory");
-    
+
     // The validator is ready to validate types that implement SpecLinked
     drop(validator);
 }
@@ -65,10 +65,10 @@ fn test_schema_validation() {
 #[test]
 fn test_validator_loads_all_schemas() {
     let validator = SpecValidator::new("../../spec").expect("Failed to load spec");
-    
+
     // The build script found 112 schemas - verify we can load them
     println!("Validator created successfully with spec from ../../spec");
-    
+
     // Validator should have loaded schemas
     drop(validator);
 }
@@ -76,22 +76,24 @@ fn test_validator_loads_all_schemas() {
 #[test]
 fn test_spec_schema_registry() {
     use oxide_spec::SchemaRegistry;
-    
-    let registry = SchemaRegistry::load_from_spec_dir("../../spec")
-        .expect("Failed to load schema registry");
-    
+
+    let registry =
+        SchemaRegistry::load_from_spec_dir("../../spec").expect("Failed to load schema registry");
+
     // Check that we loaded schemas
     let count = registry.len();
     println!("Loaded {} schemas from spec", count);
     assert!(count > 0, "Should have loaded at least one schema");
-    
+
     // Check for some expected schemas
     let schema_names: Vec<_> = registry.names().collect();
     println!("Schema names: {:?}", schema_names);
-    
+
     // Verify some known schemas exist
-    assert!(registry.get("RunQueuedPayload").is_some() || 
-            registry.get("PipelineDefinition").is_some() ||
-            registry.get("StepDefinition").is_some(),
-            "Should have at least one known schema");
+    assert!(
+        registry.get("RunQueuedPayload").is_some()
+            || registry.get("PipelineDefinition").is_some()
+            || registry.get("StepDefinition").is_some(),
+        "Should have at least one known schema"
+    );
 }

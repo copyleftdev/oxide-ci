@@ -5,7 +5,7 @@ use console::style;
 use std::path::Path;
 
 /// Initialize a new pipeline.
-pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn init() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let path = Path::new("oxide.yaml");
 
     if path.exists() {
@@ -38,7 +38,7 @@ stages:
 }
 
 /// Validate a pipeline configuration.
-pub async fn validate(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn validate(path: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let content = std::fs::read_to_string(path)?;
 
     // Try to parse as YAML
@@ -65,16 +65,13 @@ pub async fn run_pipeline(
     _branch: Option<String>,
     _wait: bool,
     _watch: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use crate::executor::{self, ExecutorConfig};
 
     // Find pipeline file
     let pipeline_path = executor::find_pipeline_file(pipeline.as_deref());
     let Some(path) = pipeline_path else {
-        println!(
-            "{} No pipeline file found. Try:",
-            style("✗").red()
-        );
+        println!("{} No pipeline file found. Try:", style("✗").red());
         println!("  - .oxide-ci/pipeline.yaml");
         println!("  - oxide.yaml");
         println!("  - Or specify path: oxide run --pipeline <path>");
@@ -106,7 +103,7 @@ pub async fn logs(
     config: &CliConfig,
     run_id: &str,
     follow: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Fetching logs for run {}...", style(run_id).bold());
     println!("  API URL: {}", config.api_url);
 
@@ -121,7 +118,10 @@ pub async fn logs(
 }
 
 /// Cancel a run.
-pub async fn cancel(config: &CliConfig, run_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn cancel(
+    config: &CliConfig,
+    run_id: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Cancelling run {}...", style(run_id).bold());
     println!("  API URL: {}", config.api_url);
 
@@ -131,7 +131,9 @@ pub async fn cancel(config: &CliConfig, run_id: &str) -> Result<(), Box<dyn std:
 }
 
 /// List agents.
-pub async fn list_agents(config: &CliConfig) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn list_agents(
+    config: &CliConfig,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Listing agents...");
     println!("  API URL: {}", config.api_url);
 
@@ -144,7 +146,7 @@ pub async fn list_agents(config: &CliConfig) -> Result<(), Box<dyn std::error::E
 pub async fn drain_agent(
     config: &CliConfig,
     agent_id: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Draining agent {}...", style(agent_id).bold());
     println!("  API URL: {}", config.api_url);
 
@@ -154,7 +156,10 @@ pub async fn drain_agent(
 }
 
 /// Set a secret.
-pub async fn set_secret(config: &CliConfig, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn set_secret(
+    config: &CliConfig,
+    name: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use dialoguer::Password;
 
     let value = Password::new()
@@ -171,7 +176,9 @@ pub async fn set_secret(config: &CliConfig, name: &str) -> Result<(), Box<dyn st
 }
 
 /// List secrets.
-pub async fn list_secrets(config: &CliConfig) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn list_secrets(
+    config: &CliConfig,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Listing secrets...");
     println!("  API URL: {}", config.api_url);
 
@@ -184,7 +191,7 @@ pub async fn list_secrets(config: &CliConfig) -> Result<(), Box<dyn std::error::
 pub async fn delete_secret(
     _config: &CliConfig,
     name: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use dialoguer::Confirm;
 
     let confirmed = Confirm::new()
@@ -205,7 +212,9 @@ pub async fn delete_secret(
 }
 
 /// List cache entries.
-pub async fn list_cache(config: &CliConfig) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn list_cache(
+    config: &CliConfig,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Listing cache entries...");
     println!("  API URL: {}", config.api_url);
 
@@ -218,7 +227,7 @@ pub async fn list_cache(config: &CliConfig) -> Result<(), Box<dyn std::error::Er
 pub async fn clear_cache(
     config: &CliConfig,
     prefix: Option<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match &prefix {
         Some(p) => println!("Clearing cache with prefix {}...", style(p).bold()),
         None => println!("Clearing all cache..."),
@@ -231,7 +240,7 @@ pub async fn clear_cache(
 }
 
 /// Login.
-pub async fn login() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn login() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use dialoguer::Input;
 
     let token: String = Input::new()
@@ -247,7 +256,7 @@ pub async fn login() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Show configuration.
-pub fn show_config(config: &CliConfig) -> Result<(), Box<dyn std::error::Error>> {
+pub fn show_config(config: &CliConfig) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Current configuration:");
     println!("  api_url: {}", config.api_url);
     println!(
@@ -272,7 +281,7 @@ pub fn show_config(config: &CliConfig) -> Result<(), Box<dyn std::error::Error>>
 }
 
 /// Set configuration.
-pub fn set_config(key: &str, value: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn set_config(key: &str, value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut config = CliConfig::load().unwrap_or_default();
     config.set(key, value)?;
     config.save()?;

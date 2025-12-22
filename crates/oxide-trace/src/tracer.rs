@@ -1,16 +1,15 @@
 //! Tracer initialization and configuration.
 
 use opentelemetry::trace::TracerProvider;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::{KeyValue, global};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
-    Resource,
-    runtime,
+    Resource, runtime,
     trace::{RandomIdGenerator, Sampler},
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Debug, Error)]
 pub enum TracerError {
@@ -139,8 +138,7 @@ fn init_otlp_tracer(
 
     let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     let fmt_layer = tracing_subscriber::fmt::layer()
         .with_target(true)
@@ -156,8 +154,7 @@ fn init_otlp_tracer(
 }
 
 fn init_basic_tracing() {
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     let fmt_layer = tracing_subscriber::fmt::layer()
         .with_target(true)

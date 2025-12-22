@@ -80,7 +80,11 @@ impl UsageTracker {
     /// Record build minutes for a run.
     pub fn record_build_minutes(&mut self, minutes: i64) {
         self.pending_minutes += minutes;
-        info!(minutes = minutes, total = self.pending_minutes, "Recorded build minutes");
+        info!(
+            minutes = minutes,
+            total = self.pending_minutes,
+            "Recorded build minutes"
+        );
     }
 
     /// Get pending minutes to report.
@@ -91,7 +95,8 @@ impl UsageTracker {
     /// Create a usage record and reset pending.
     pub fn flush(&mut self) -> Option<UsageRecord> {
         if self.pending_minutes > 0 {
-            let record = UsageRecord::build_minutes(&self.subscription_item_id, self.pending_minutes);
+            let record =
+                UsageRecord::build_minutes(&self.subscription_item_id, self.pending_minutes);
             self.pending_minutes = 0;
             Some(record)
         } else {

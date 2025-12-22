@@ -4,11 +4,14 @@ use clap::Parser;
 
 mod commands;
 mod config;
+mod dag;
 mod executor;
 mod handlers;
 
 #[cfg(test)]
 mod executor_tests;
+#[cfg(test)]
+mod parallel_tests;
 
 use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};
 use config::CliConfig;
@@ -22,7 +25,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing_subscriber::fmt::init();
 
     let cli = Cli::parse();

@@ -72,8 +72,8 @@ impl PgRunRepository {
 #[async_trait]
 impl RunRepository for PgRunRepository {
     async fn create(&self, run: &Run) -> Result<RunId> {
-        let trigger_json = serde_json::to_value(&run.trigger)
-            .map_err(|e| Error::Serialization(e.to_string()))?;
+        let trigger_json =
+            serde_json::to_value(&run.trigger).map_err(|e| Error::Serialization(e.to_string()))?;
 
         sqlx::query(
             r#"INSERT INTO runs (id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms)
@@ -112,7 +112,12 @@ impl RunRepository for PgRunRepository {
         }
     }
 
-    async fn get_by_pipeline(&self, pipeline_id: PipelineId, limit: u32, offset: u32) -> Result<Vec<Run>> {
+    async fn get_by_pipeline(
+        &self,
+        pipeline_id: PipelineId,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<Run>> {
         let rows = sqlx::query(
             "SELECT id, pipeline_id, run_number, status, trigger, git_ref, git_sha, queued_at, started_at, completed_at, duration_ms FROM runs WHERE pipeline_id = $1 ORDER BY run_number DESC LIMIT $2 OFFSET $3"
         )
@@ -137,8 +142,8 @@ impl RunRepository for PgRunRepository {
     }
 
     async fn update(&self, run: &Run) -> Result<()> {
-        let trigger_json = serde_json::to_value(&run.trigger)
-            .map_err(|e| Error::Serialization(e.to_string()))?;
+        let trigger_json =
+            serde_json::to_value(&run.trigger).map_err(|e| Error::Serialization(e.to_string()))?;
 
         sqlx::query(
             "UPDATE runs SET status = $2, trigger = $3, started_at = $4, completed_at = $5, duration_ms = $6, updated_at = NOW() WHERE id = $1"

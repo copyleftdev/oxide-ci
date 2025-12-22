@@ -125,10 +125,9 @@ impl TokenExchangeProvider for AwsProvider {
             )));
         }
 
-        let sts_response: StsResponse = response
-            .json()
-            .await
-            .map_err(|e| ProviderError::TokenExchange(format!("Failed to parse STS response: {}", e)))?;
+        let sts_response: StsResponse = response.json().await.map_err(|e| {
+            ProviderError::TokenExchange(format!("Failed to parse STS response: {}", e))
+        })?;
 
         let creds = &sts_response.response.result.credentials;
         let expiration = DateTime::parse_from_rfc3339(&creds.expiration)

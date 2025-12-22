@@ -125,13 +125,13 @@ mod tests {
 
     #[test]
     fn test_traceparent_roundtrip() {
-        let ctx = TraceContext::new(
-            "4bf92f3577b34da6a3ce929d0e0e4736",
-            "00f067aa0ba902b7",
-        );
+        let ctx = TraceContext::new("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7");
 
         let header = ctx.to_traceparent();
-        assert_eq!(header, "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
+        assert_eq!(
+            header,
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+        );
 
         let parsed = TraceContext::from_traceparent(&header).unwrap();
         assert_eq!(parsed.trace_id, ctx.trace_id);
@@ -140,8 +140,7 @@ mod tests {
 
     #[test]
     fn test_extract_inject_headers() {
-        let ctx = TraceContext::new("abc123", "def456")
-            .with_trace_state("vendor=value");
+        let ctx = TraceContext::new("abc123", "def456").with_trace_state("vendor=value");
 
         let mut headers = HashMap::new();
         inject_into_headers(&ctx, &mut headers);
