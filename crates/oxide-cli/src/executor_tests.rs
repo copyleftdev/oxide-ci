@@ -188,4 +188,66 @@ mod tests {
         assert!(!masked.contains("secret-123"));
         assert!(!masked.contains("password456"));
     }
+
+    #[test]
+    fn test_evaluate_condition_simple() {
+        use oxide_core::pipeline::ConditionExpression;
+        let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
+        ctx.variables
+            .insert("BRANCH".to_string(), "main".to_string());
+
+        // true
+        let cond_true = ConditionExpression::Simple("${{ BRANCH }} == main".to_string());
+        assert!(ctx.evaluate_condition(&cond_true));
+
+        // false
+        let cond_false = ConditionExpression::Simple("${{ BRANCH }} == dev".to_string());
+        assert!(!ctx.evaluate_condition(&cond_false));
+
+        // inequality
+        let cond_neq = ConditionExpression::Simple("${{ BRANCH }} != dev".to_string());
+        assert!(ctx.evaluate_condition(&cond_neq));
+
+        // contains
+        let cond_contains = ConditionExpression::Simple("${{ BRANCH }} contains ai".to_string());
+        assert!(ctx.evaluate_condition(&cond_contains));
+
+        // boolean literals
+        assert!(ctx.evaluate_condition(&ConditionExpression::Simple("true".to_string())));
+        assert!(!ctx.evaluate_condition(&ConditionExpression::Simple("false".to_string())));
+    }
+
+    #[test]
+    fn test_evaluate_condition_structured() {
+        use oxide_core::pipeline::ConditionExpression;
+        let ctx = ExecutionContext::new(PathBuf::from("/tmp"));
+
+        // if: true
+        let cond_if = ConditionExpression::Structured {
+            if_expr: Some("true".to_string()),
+            unless: None,
+        };
+        assert!(ctx.evaluate_condition(&cond_if));
+
+        // unless: true -> false
+        let cond_unless = ConditionExpression::Structured {
+            if_expr: None,
+            unless: Some("true".to_string()),
+        };
+        assert!(!ctx.evaluate_condition(&cond_unless));
+
+        // if: true, unless: false -> true
+        let cond_mixed = ConditionExpression::Structured {
+            if_expr: Some("true".to_string()),
+            unless: Some("false".to_string()),
+        };
+        assert!(ctx.evaluate_condition(&cond_mixed));
+
+        // if: true, unless: true -> false
+        let cond_mixed_false = ConditionExpression::Structured {
+            if_expr: Some("true".to_string()),
+            unless: Some("true".to_string()),
+        };
+        assert!(!ctx.evaluate_condition(&cond_mixed_false));
+    }
 }

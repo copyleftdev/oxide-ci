@@ -8,7 +8,9 @@
 
 use console::style;
 use futures::future::join_all;
-use oxide_core::pipeline::{PipelineDefinition, StageDefinition, StepDefinition};
+use oxide_core::pipeline::{
+    ConditionExpression, PipelineDefinition, StageDefinition, StepDefinition,
+};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -138,6 +140,52 @@ impl ExecutionContext {
         }
         output
     }
+
+    /// Evaluate a condition expression.
+    pub fn evaluate_condition(&self, condition: &ConditionExpression) -> bool {
+        match condition {
+            ConditionExpression::Simple(expr) => self.evaluate_string_expression(expr),
+            ConditionExpression::Structured { if_expr, unless } => {
+                if let Some(expr) = if_expr
+                    && !self.evaluate_string_expression(expr) {
+                        return false;
+                }
+                if let Some(expr) = unless
+                    && self.evaluate_string_expression(expr) {
+                        return false;
+                }
+                true
+            }
+        }
+    }
+
+    /// Evaluate a simple string expression (equality, inequality, contains).
+    fn evaluate_string_expression(&self, expr: &str) -> bool {
+        let interpolated = self.interpolate(expr);
+        let trimmed = interpolated.trim();
+
+        // Boolean literals
+        if trimmed == "true" {
+            return true;
+        }
+        if trimmed == "false" {
+            return false;
+        }
+
+        // Operators
+        if let Some((left, right)) = trimmed.split_once("==") {
+            return left.trim() == right.trim();
+        }
+        if let Some((left, right)) = trimmed.split_once("!=") {
+            return left.trim() != right.trim();
+        }
+        if let Some((left, right)) = trimmed.split_once(" contains ") {
+            return left.trim().contains(right.trim());
+        }
+
+        // Default to false if not recognized (safe default)
+        false
+    }
 }
 
 /// Result of a step execution.
@@ -220,8 +268,6 @@ pub async fn execute_pipeline(
     let mut completed_stages = HashSet::new();
     let mut running_stages = HashSet::new(); // names of currently running stages
     let mut join_set = JoinSet::new();
-
-
 
     // If stage_filter is set, we bypass DAG complexity for now and just run that stage?
     if let Some(filter) = stage_filter {
@@ -351,6 +397,16 @@ async fn execute_stage(
         style(&stage.name).bold()
     );
 
+    // Evaluate stage condition
+    if let Some(condition) = &stage.condition
+        && !ctx.evaluate_condition(condition) {
+            println!("    {} Skipped (condition unmet)", style("⏭").dim());
+            return Ok(StageResult {
+                success: true,
+                steps: Vec::new(),
+            });
+    }
+
     let mut step_results = Vec::new();
     let mut all_success = true;
 
@@ -457,6 +513,22 @@ async fn execute_step(
     total_steps: usize,
 ) -> Result<StepResult, Box<dyn std::error::Error + Send + Sync>> {
     let start = std::time::Instant::now();
+
+    // Evaluate step condition
+    if let Some(condition) = &step.condition
+        && !ctx.evaluate_condition(condition) {
+            println!(
+                "    [{}/{}] {} (skipped)",
+                step_num,
+                total_steps,
+                style(&step.name).dim()
+            );
+            return Ok(StepResult {
+                success: true,
+                exit_code: 0,
+                duration_ms: 0,
+            });
+    }
 
     // Handle plugin steps (skip for now, just log)
     if let Some(ref plugin) = step.plugin {
