@@ -26,6 +26,8 @@ pub struct ExecutionContext {
     pub outputs: HashMap<String, String>,
     /// Matrix values for current job
     pub matrix: HashMap<String, String>,
+    /// Secrets to mask in output
+    pub secrets: HashMap<String, String>,
     /// Working directory
     pub workspace: PathBuf,
 }
@@ -37,6 +39,7 @@ impl ExecutionContext {
             variables: HashMap::new(),
             outputs: HashMap::new(),
             matrix: HashMap::new(),
+            secrets: HashMap::new(),
             workspace,
         }
     }
@@ -110,6 +113,22 @@ impl ExecutionContext {
                 }
             }
         }
+    }
+
+    /// Add a secret to the context.
+    pub fn add_secret(&mut self, key: impl Into<String>, value: impl Into<String>) {
+        self.secrets.insert(key.into(), value.into());
+    }
+
+    /// Mask secrets in the input string.
+    pub fn mask_secrets(&self, input: &str) -> String {
+        let mut output = input.to_string();
+        for value in self.secrets.values() {
+            if !value.is_empty() {
+                output = output.replace(value, "***");
+            }
+        }
+        output
     }
 }
 
@@ -366,6 +385,11 @@ async fn execute_step(
         cmd.env(k, ctx.interpolate(v));
     }
 
+    // Set secrets as environment variables
+    for (k, v) in &ctx.secrets {
+        cmd.env(k, v);
+    }
+
     // Spawn process
     let mut child = cmd.spawn()?;
 
@@ -373,19 +397,23 @@ async fn execute_step(
     let stdout = child.stdout.take().expect("stdout");
     let stderr = child.stderr.take().expect("stderr");
 
+    // Clone context for async tasks
+    let ctx_stdout = ctx.clone();
     let stdout_handle = tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            println!("      {}", style(&line).dim());
+            println!("      {}", style(&ctx_stdout.mask_secrets(&line)).dim());
         }
     });
 
+    // Clone context for async tasks
+    let ctx_stderr = ctx.clone();
     let stderr_handle = tokio::spawn(async move {
         let reader = BufReader::new(stderr);
         let mut lines = reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            println!("      {}", style(&line).red().dim());
+            println!("      {}", style(&ctx_stderr.mask_secrets(&line)).red().dim());
         }
     });
 
