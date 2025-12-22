@@ -17,6 +17,8 @@ pub enum DagError {
     EmptyPipeline,
 }
 
+use crate::matrix::MatrixExpander;
+
 /// A node in the pipeline DAG.
 #[derive(Debug, Clone)]
 pub struct DagNode {
@@ -30,7 +32,8 @@ pub struct DagNode {
 #[derive(Debug)]
 pub struct PipelineDag {
     pub graph: DiGraph<DagNode, ()>,
-    pub name_to_index: HashMap<String, NodeIndex>,
+    // Map logical stage name to all its expanded nodes (indices)
+    pub name_to_nodes: HashMap<String, Vec<NodeIndex>>,
 }
 
 impl PipelineDag {
@@ -52,12 +55,16 @@ impl PipelineDag {
     /// Get stages that can run after a given stage completes.
     #[allow(dead_code)]
     pub fn successors(&self, stage_name: &str) -> Vec<&DagNode> {
-        self.name_to_index
+        self.name_to_nodes
             .get(stage_name)
-            .map(|&idx| {
-                self.graph
-                    .neighbors_directed(idx, petgraph::Direction::Outgoing)
-                    .filter_map(|n| self.graph.node_weight(n))
+            .map(|indices| {
+                indices
+                    .iter()
+                    .flat_map(|&idx| {
+                        self.graph
+                            .neighbors_directed(idx, petgraph::Direction::Outgoing)
+                            .filter_map(|n| self.graph.node_weight(n))
+                    })
                     .collect()
             })
             .unwrap_or_default()
@@ -65,12 +72,16 @@ impl PipelineDag {
 
     /// Get stages that must complete before a given stage can run.
     pub fn predecessors(&self, stage_name: &str) -> Vec<&DagNode> {
-        self.name_to_index
+        self.name_to_nodes
             .get(stage_name)
-            .map(|&idx| {
-                self.graph
-                    .neighbors_directed(idx, petgraph::Direction::Incoming)
-                    .filter_map(|n| self.graph.node_weight(n))
+            .map(|indices| {
+                indices
+                    .iter()
+                    .flat_map(|&idx| {
+                        self.graph
+                            .neighbors_directed(idx, petgraph::Direction::Incoming)
+                            .filter_map(|n| self.graph.node_weight(n))
+                    })
                     .collect()
             })
             .unwrap_or_default()
@@ -119,33 +130,73 @@ impl DagBuilder {
         }
 
         let mut graph = DiGraph::new();
-        let mut name_to_index = HashMap::new();
+        let mut name_to_nodes: HashMap<String, Vec<NodeIndex>> = HashMap::new();
+        let matrix_expander = MatrixExpander::new();
 
-        // Add all stages as nodes
+        // Add all stages as nodes (expanding matrix stages)
         for stage in &pipeline.stages {
-            let node = DagNode {
-                stage_id: StageId::new(&stage.name),
-                name: stage.name.clone(),
-                definition: stage.clone(),
-            };
-            let idx = graph.add_node(node);
-            name_to_index.insert(stage.name.clone(), idx);
+            if let Some(matrix_jobs) = matrix_expander.expand(stage) {
+                // Matrix stage: create multiple nodes
+                for job in matrix_jobs {
+                    let mut definition = stage.clone();
+                    // Inject matrix variables
+                    for (k, v) in job.variables {
+                        let v_str = match v {
+                            serde_json::Value::String(s) => s,
+                            _ => v.to_string(),
+                        };
+                        definition.variables.insert(format!("matrix.{}", k), v_str);
+                    }
+                    // Update name to include variant
+                    definition.name = job.display_name.clone();
+
+                    let node = DagNode {
+                        stage_id: StageId::new(&definition.name),
+                        name: definition.name.clone(),
+                        definition,
+                    };
+                    let idx = graph.add_node(node);
+                    name_to_nodes
+                        .entry(stage.name.clone())
+                        .or_default()
+                        .push(idx);
+                }
+            } else {
+                // Normal stage
+                let node = DagNode {
+                    stage_id: StageId::new(&stage.name),
+                    name: stage.name.clone(),
+                    definition: stage.clone(),
+                };
+                let idx = graph.add_node(node);
+                name_to_nodes
+                    .entry(stage.name.clone())
+                    .or_default()
+                    .push(idx);
+            }
         }
 
         // Add edges for dependencies
         for stage in &pipeline.stages {
-            let stage_idx = name_to_index[&stage.name];
+            let stage_indices = name_to_nodes.get(&stage.name).unwrap().clone();
+
             for dep in &stage.depends_on {
-                let dep_idx = name_to_index
+                let dep_indices = name_to_nodes
                     .get(dep)
                     .ok_or_else(|| DagError::UnknownDependency(dep.clone()))?;
-                graph.add_edge(*dep_idx, stage_idx, ());
+
+                // Cartesian product: all dependency variants -> all stage variants
+                for &dep_idx in dep_indices {
+                    for &stage_idx in &stage_indices {
+                        graph.add_edge(dep_idx, stage_idx, ());
+                    }
+                }
             }
         }
 
         let dag = PipelineDag {
             graph,
-            name_to_index,
+            name_to_nodes,
         };
 
         // Verify no cycles

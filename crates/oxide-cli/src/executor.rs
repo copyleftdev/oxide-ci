@@ -147,12 +147,14 @@ impl ExecutionContext {
             ConditionExpression::Simple(expr) => self.evaluate_string_expression(expr),
             ConditionExpression::Structured { if_expr, unless } => {
                 if let Some(expr) = if_expr
-                    && !self.evaluate_string_expression(expr) {
-                        return false;
+                    && !self.evaluate_string_expression(expr)
+                {
+                    return false;
                 }
                 if let Some(expr) = unless
-                    && self.evaluate_string_expression(expr) {
-                        return false;
+                    && self.evaluate_string_expression(expr)
+                {
+                    return false;
                 }
                 true
             }
@@ -399,12 +401,13 @@ async fn execute_stage(
 
     // Evaluate stage condition
     if let Some(condition) = &stage.condition
-        && !ctx.evaluate_condition(condition) {
-            println!("    {} Skipped (condition unmet)", style("⏭").dim());
-            return Ok(StageResult {
-                success: true,
-                steps: Vec::new(),
-            });
+        && !ctx.evaluate_condition(condition)
+    {
+        println!("    {} Skipped (condition unmet)", style("⏭").dim());
+        return Ok(StageResult {
+            success: true,
+            steps: Vec::new(),
+        });
     }
 
     let mut step_results = Vec::new();
@@ -416,6 +419,11 @@ async fn execute_stage(
     // Merge stage variables
     for (k, v) in &stage.variables {
         ctx.variables.insert(k.clone(), v.clone());
+
+        // Populate matrix context if variable starts with matrix.
+        if let Some(matrix_key) = k.strip_prefix("matrix.") {
+            ctx.matrix.insert(matrix_key.to_string(), v.clone());
+        }
     }
 
     if stage.parallel {
@@ -516,18 +524,19 @@ async fn execute_step(
 
     // Evaluate step condition
     if let Some(condition) = &step.condition
-        && !ctx.evaluate_condition(condition) {
-            println!(
-                "    [{}/{}] {} (skipped)",
-                step_num,
-                total_steps,
-                style(&step.name).dim()
-            );
-            return Ok(StepResult {
-                success: true,
-                exit_code: 0,
-                duration_ms: 0,
-            });
+        && !ctx.evaluate_condition(condition)
+    {
+        println!(
+            "    [{}/{}] {} (skipped)",
+            step_num,
+            total_steps,
+            style(&step.name).dim()
+        );
+        return Ok(StepResult {
+            success: true,
+            exit_code: 0,
+            duration_ms: 0,
+        });
     }
 
     // Handle plugin steps (skip for now, just log)

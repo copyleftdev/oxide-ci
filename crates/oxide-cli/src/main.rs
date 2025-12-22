@@ -7,6 +7,7 @@ mod config;
 mod dag;
 mod executor;
 mod handlers;
+mod matrix;
 
 #[cfg(test)]
 mod executor_tests;
