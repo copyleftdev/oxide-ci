@@ -44,9 +44,7 @@ pub async fn get_approval(
     State(_state): State<Arc<AppState>>,
     Path(gate_id): Path<String>,
 ) -> Result<Json<ApprovalGate>, StatusCode> {
-    let _gate_id: ApprovalGateId = gate_id
-        .parse()
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let _gate_id: ApprovalGateId = gate_id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
     // TODO: Fetch approval gate from database
     Err(StatusCode::NOT_FOUND)
@@ -58,9 +56,7 @@ pub async fn respond_to_approval(
     Path(gate_id): Path<String>,
     Json(request): Json<ApprovalRequest>,
 ) -> Result<Json<ApprovalResponse>, StatusCode> {
-    let gate_id: ApprovalGateId = gate_id
-        .parse()
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let gate_id: ApprovalGateId = gate_id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
     // TODO: Fetch gate, validate user can approve, update state, publish event
 
@@ -91,9 +87,7 @@ pub async fn bypass_approval(
     State(_state): State<Arc<AppState>>,
     Path(gate_id): Path<String>,
 ) -> Result<Json<ApprovalResponse>, StatusCode> {
-    let gate_id: ApprovalGateId = gate_id
-        .parse()
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let gate_id: ApprovalGateId = gate_id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
     // TODO: Verify admin permissions, bypass gate, publish event
 

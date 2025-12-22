@@ -8,7 +8,8 @@ mod tests {
     #[test]
     fn test_interpolate_simple_variable() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.variables.insert("NAME".to_string(), "world".to_string());
+        ctx.variables
+            .insert("NAME".to_string(), "world".to_string());
 
         assert_eq!(ctx.interpolate("Hello ${{ NAME }}!"), "Hello world!");
     }
@@ -16,9 +17,13 @@ mod tests {
     #[test]
     fn test_interpolate_env_variable() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.variables.insert("MY_VAR".to_string(), "test_value".to_string());
+        ctx.variables
+            .insert("MY_VAR".to_string(), "test_value".to_string());
 
-        assert_eq!(ctx.interpolate("Value: ${{ env.MY_VAR }}"), "Value: test_value");
+        assert_eq!(
+            ctx.interpolate("Value: ${{ env.MY_VAR }}"),
+            "Value: test_value"
+        );
     }
 
     #[test]
@@ -62,8 +67,10 @@ mod tests {
     #[test]
     fn test_interpolate_multiple_variables() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.variables.insert("FIRST".to_string(), "Hello".to_string());
-        ctx.variables.insert("SECOND".to_string(), "World".to_string());
+        ctx.variables
+            .insert("FIRST".to_string(), "Hello".to_string());
+        ctx.variables
+            .insert("SECOND".to_string(), "World".to_string());
 
         assert_eq!(
             ctx.interpolate("${{ FIRST }} ${{ SECOND }}!"),
@@ -87,10 +94,7 @@ mod tests {
     fn test_interpolate_no_variables() {
         let ctx = ExecutionContext::new(PathBuf::from("/tmp"));
 
-        assert_eq!(
-            ctx.interpolate("No variables here"),
-            "No variables here"
-        );
+        assert_eq!(ctx.interpolate("No variables here"), "No variables here");
     }
 
     #[test]
@@ -100,10 +104,7 @@ mod tests {
 
         ctx.parse_outputs("build", content);
 
-        assert_eq!(
-            ctx.outputs.get("build.version"),
-            Some(&"1.0.0".to_string())
-        );
+        assert_eq!(ctx.outputs.get("build.version"), Some(&"1.0.0".to_string()));
         assert_eq!(
             ctx.outputs.get("build.status"),
             Some(&"success".to_string())
@@ -128,16 +129,13 @@ mod tests {
 
         ctx.parse_outputs("math", content);
 
-        assert_eq!(
-            ctx.outputs.get("math.equation"),
-            Some(&"x=y+z".to_string())
-        );
+        assert_eq!(ctx.outputs.get("math.equation"), Some(&"x=y+z".to_string()));
     }
 
     #[test]
     fn test_set_output_and_retrieve() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        
+
         ctx.set_output("step1", "result", "success".to_string());
         ctx.set_output("step1", "count", "42".to_string());
         ctx.set_output("step2", "result", "failure".to_string());
@@ -147,10 +145,7 @@ mod tests {
             ctx.interpolate("${{ steps.step1.outputs.result }}"),
             "success"
         );
-        assert_eq!(
-            ctx.interpolate("${{ steps.step1.outputs.count }}"),
-            "42"
-        );
+        assert_eq!(ctx.interpolate("${{ steps.step1.outputs.count }}"), "42");
         assert_eq!(
             ctx.interpolate("${{ steps.step2.outputs.result }}"),
             "failure"
@@ -160,9 +155,12 @@ mod tests {
     #[test]
     fn test_interpolate_complex_script() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.variables.insert("PROJECT".to_string(), "myapp".to_string());
-        ctx.variables.insert("VERSION".to_string(), "2.0.0".to_string());
-        ctx.matrix.insert("target".to_string(), "x86_64-linux".to_string());
+        ctx.variables
+            .insert("PROJECT".to_string(), "myapp".to_string());
+        ctx.variables
+            .insert("VERSION".to_string(), "2.0.0".to_string());
+        ctx.matrix
+            .insert("target".to_string(), "x86_64-linux".to_string());
         ctx.set_output("build", "binary", "myapp-linux".to_string());
 
         let script = r#"
@@ -172,7 +170,7 @@ mod tests {
         "#;
 
         let result = ctx.interpolate(script);
-        
+
         assert!(result.contains("Building myapp v2.0.0"));
         assert!(result.contains("Target: x86_64-linux"));
         assert!(result.contains("Binary: myapp-linux"));

@@ -7,13 +7,17 @@
 //! - Output capture via `$OXIDE_OUTPUT` file
 
 use console::style;
+use futures::future::join_all;
 use oxide_core::pipeline::{PipelineDefinition, StageDefinition, StepDefinition};
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tokio::task::JoinSet;
+
+use crate::dag::DagBuilder;
 
 /// Execution context passed through the pipeline.
 ///
@@ -53,7 +57,7 @@ impl ExecutionContext {
     /// - `${{ steps.name.outputs.key }}` - step output
     pub fn interpolate(&self, input: &str) -> String {
         let re = Regex::new(r"\$\{\{\s*([^}]+)\s*\}\}").unwrap();
-        
+
         re.replace_all(input, |caps: &regex::Captures| {
             let expr = caps.get(1).map_or("", |m| m.as_str()).trim();
             self.resolve_expression(expr)
@@ -65,7 +69,9 @@ impl ExecutionContext {
     fn resolve_expression(&self, expr: &str) -> String {
         // Handle env.VAR
         if let Some(var_name) = expr.strip_prefix("env.") {
-            return self.variables.get(var_name)
+            return self
+                .variables
+                .get(var_name)
                 .cloned()
                 .or_else(|| std::env::var(var_name).ok())
                 .unwrap_or_default();
@@ -78,12 +84,13 @@ impl ExecutionContext {
 
         // Handle steps.name.outputs.key
         if let Some(rest) = expr.strip_prefix("steps.")
-            && let Some(outputs_idx) = rest.find(".outputs.") {
-                let step_name = &rest[..outputs_idx];
-                let output_key = &rest[outputs_idx + 9..]; // ".outputs." is 9 chars
-                let lookup_key = format!("{}.{}", step_name, output_key);
-                return self.outputs.get(&lookup_key).cloned().unwrap_or_default();
-            }
+            && let Some(outputs_idx) = rest.find(".outputs.")
+        {
+            let step_name = &rest[..outputs_idx];
+            let output_key = &rest[outputs_idx + 9..]; // ".outputs." is 9 chars
+            let lookup_key = format!("{}.{}", step_name, output_key);
+            return self.outputs.get(&lookup_key).cloned().unwrap_or_default();
+        }
 
         // Direct variable lookup
         self.variables.get(expr).cloned().unwrap_or_default()
@@ -104,7 +111,7 @@ impl ExecutionContext {
             if line.is_empty() {
                 continue;
             }
-            
+
             if let Some(eq_pos) = line.find('=') {
                 let key = line[..eq_pos].trim();
                 let value = line[eq_pos + 1..].trim();
@@ -116,6 +123,7 @@ impl ExecutionContext {
     }
 
     /// Add a secret to the context.
+    #[allow(dead_code)]
     pub fn add_secret(&mut self, key: impl Into<String>, value: impl Into<String>) {
         self.secrets.insert(key.into(), value.into());
     }
@@ -180,7 +188,7 @@ pub async fn execute_pipeline(
     definition: &PipelineDefinition,
     config: &ExecutorConfig,
     stage_filter: Option<&str>,
-) -> Result<PipelineResult, Box<dyn std::error::Error>> {
+) -> Result<PipelineResult, Box<dyn std::error::Error + Send + Sync>> {
     let start = std::time::Instant::now();
     let mut stages_results = Vec::new();
     let mut all_success = true;
@@ -188,7 +196,7 @@ pub async fn execute_pipeline(
     // Initialize execution context
     let mut ctx = ExecutionContext::new(config.workspace.clone());
     ctx.variables = config.variables.clone();
-    
+
     // Merge pipeline variables
     for (k, v) in &definition.variables {
         ctx.variables.insert(k.clone(), v.clone());
@@ -205,20 +213,104 @@ pub async fn execute_pipeline(
         definition.timeout_minutes
     );
 
-    for stage in &definition.stages {
-        // Filter stages if specified
-        if let Some(filter) = stage_filter
-            && stage.name != filter {
-                continue;
+    // Build DAG for execution
+    let dag = DagBuilder::new().build(definition)?;
+
+    // Track execution state
+    let mut completed_stages = HashSet::new();
+    let mut running_stages = HashSet::new(); // names of currently running stages
+    let mut join_set = JoinSet::new();
+
+
+
+    // If stage_filter is set, we bypass DAG complexity for now and just run that stage?
+    if let Some(filter) = stage_filter {
+        // Simple linear search for the stage
+        if let Some(stage) = definition.stages.iter().find(|s| s.name == filter) {
+            let stage_result = execute_stage(stage, &mut ctx, config.verbose).await?;
+            stages_results.push((stage.name.clone(), stage_result));
+        }
+    } else {
+        // Full DAG execution
+        let mut queued_stages = HashSet::new();
+
+        loop {
+            // Find ready stages
+            let mut new_ready = Vec::new();
+            for node in dag.stages() {
+                if !completed_stages.contains(&node.name)
+                    && !running_stages.contains(&node.name)
+                    && !queued_stages.contains(&node.name)
+                    && dag.is_ready(
+                        &node.name,
+                        &completed_stages.iter().cloned().collect::<Vec<_>>(),
+                    )
+                {
+                    new_ready.push(node.definition.clone());
+                    queued_stages.insert(node.name.clone());
+                }
             }
 
-        let stage_result = execute_stage(stage, &mut ctx, config.verbose).await?;
-        let success = stage_result.success;
-        stages_results.push((stage.name.clone(), stage_result));
+            // Spawn ready stages
+            for stage in new_ready {
+                let mut stage_ctx = ctx.clone();
+                let stage_name = stage.name.clone();
+                let verbose = config.verbose;
 
-        if !success {
-            all_success = false;
-            break; // Stop on first failure
+                running_stages.insert(stage_name.clone());
+
+                join_set.spawn(async move {
+                    let res = execute_stage(&stage, &mut stage_ctx, verbose).await;
+                    (stage_name, res, stage_ctx.outputs)
+                });
+            }
+
+            // If nothing running and nothing queued/ready, we are done
+            if join_set.is_empty() {
+                break;
+            }
+
+            // Wait for next stage to complete
+            if let Some(result) = join_set.join_next().await {
+                match result {
+                    Ok((name, execution_res, outputs)) => {
+                        running_stages.remove(&name);
+                        match execution_res {
+                            Ok(stage_res) => {
+                                let success = stage_res.success;
+                                stages_results.push((name.clone(), stage_res));
+
+                                if success {
+                                    completed_stages.insert(name);
+                                    // Merge outputs back to main context for dependents
+                                    for (k, v) in outputs {
+                                        ctx.outputs.insert(k, v);
+                                    }
+                                } else {
+                                    all_success = false;
+                                    // If a stage fails, do we cancel others?
+                                    // For now, let running finish but don't spawn new ones dependent on this.
+                                    // But independent ones could continue?
+                                    // Standard CI usually stops pipeline on failure unless 'continue-on-error'
+                                    // If we break loop, running futures might be dropped (cancelled).
+                                    // Let's break to stop.
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                println!("Stage {} execution error: {}", name, e);
+                                all_success = false;
+                                break;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("Join error: {}", e);
+                        all_success = false;
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -252,7 +344,7 @@ async fn execute_stage(
     stage: &StageDefinition,
     ctx: &mut ExecutionContext,
     verbose: bool,
-) -> Result<StageResult, Box<dyn std::error::Error>> {
+) -> Result<StageResult, Box<dyn std::error::Error + Send + Sync>> {
     println!(
         "{} Stage: {}",
         style("━━▶").cyan(),
@@ -264,23 +356,75 @@ async fn execute_stage(
 
     // Save original variables to restore after stage
     let original_vars = ctx.variables.clone();
-    
+
     // Merge stage variables
     for (k, v) in &stage.variables {
         ctx.variables.insert(k.clone(), v.clone());
     }
 
-    for (idx, step) in stage.steps.iter().enumerate() {
-        let step_result = execute_step(step, ctx, verbose, idx + 1, stage.steps.len()).await?;
-        let success = step_result.success;
-        step_results.push((step.name.clone(), step_result));
+    if stage.parallel {
+        // Execute steps in parallel
+        let mut futures = Vec::new();
+        for (idx, step) in stage.steps.iter().enumerate() {
+            let mut step_ctx = ctx.clone();
+            let step_ref = step.clone();
+            let step_count = stage.steps.len();
 
-        if !success && !step.continue_on_error {
-            all_success = false;
-            break;
+            futures.push(async move {
+                let res =
+                    execute_step(&step_ref, &mut step_ctx, verbose, idx + 1, step_count).await;
+                (step_ref.name, res, step_ctx.outputs)
+            });
+        }
+
+        let results = join_all(futures).await;
+
+        for (name, res, outputs) in results {
+            match res {
+                Ok(step_res) => {
+                    let success = step_res.success;
+                    step_results.push((name.clone(), step_res));
+
+                    // Merge outputs
+                    for (k, v) in outputs {
+                        ctx.outputs.insert(k, v);
+                    }
+
+                    if !success {
+                        // In parallel mode, we might want to wait for all?
+                        // join_all waits for all.
+                        // But we should mark stage as failed.
+                        // We check continue_on_error?
+                        // We need the step definition for continue_on_error.
+                        // But we just have name.
+                        // Let's assume proper checking.
+                        // Check the specific step definition from stage.steps?
+                        let step_def = stage.steps.iter().find(|s| s.name == name).unwrap();
+                        if !step_def.continue_on_error {
+                            all_success = false;
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("Step {} error: {}", name, e);
+                    all_success = false;
+                }
+            }
+        }
+    } else {
+        // Execute steps sequentially
+        for (idx, step) in stage.steps.iter().enumerate() {
+            let step_result = execute_step(step, ctx, verbose, idx + 1, stage.steps.len()).await?;
+            let success = step_result.success;
+            step_results.push((step.name.clone(), step_result));
+
+            if !success && !step.continue_on_error {
+                all_success = false;
+                break;
+            }
         }
     }
-    
+
     // Restore original variables (but keep outputs)
     ctx.variables = original_vars;
 
@@ -311,7 +455,7 @@ async fn execute_step(
     _verbose: bool,
     step_num: usize,
     total_steps: usize,
-) -> Result<StepResult, Box<dyn std::error::Error>> {
+) -> Result<StepResult, Box<dyn std::error::Error + Send + Sync>> {
     let start = std::time::Instant::now();
 
     // Handle plugin steps (skip for now, just log)
@@ -323,7 +467,10 @@ async fn execute_step(
             style(&step.name).bold(),
             style(plugin).dim()
         );
-        println!("      {} Plugin execution not yet implemented", style("⚠").yellow());
+        println!(
+            "      {} Plugin execution not yet implemented",
+            style("⚠").yellow()
+        );
         return Ok(StepResult {
             success: true,
             exit_code: 0,
@@ -335,7 +482,8 @@ async fn execute_step(
     let Some(ref script) = step.run else {
         println!(
             "    [{}/{}] {} (no action)",
-            step_num, total_steps,
+            step_num,
+            total_steps,
             style(&step.name).dim()
         );
         return Ok(StepResult {
@@ -413,7 +561,10 @@ async fn execute_step(
         let reader = BufReader::new(stderr);
         let mut lines = reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            println!("      {}", style(&ctx_stderr.mask_secrets(&line)).red().dim());
+            println!(
+                "      {}",
+                style(&ctx_stderr.mask_secrets(&line)).red().dim()
+            );
         }
     });
 
@@ -487,7 +638,9 @@ pub fn find_pipeline_file(path: Option<&str>) -> Option<PathBuf> {
 }
 
 /// Load and parse a pipeline file.
-pub fn load_pipeline(path: &Path) -> Result<PipelineDefinition, Box<dyn std::error::Error>> {
+pub fn load_pipeline(
+    path: &Path,
+) -> Result<PipelineDefinition, Box<dyn std::error::Error + Send + Sync>> {
     let content = std::fs::read_to_string(path)?;
     let definition: PipelineDefinition = serde_yaml::from_str(&content)?;
     Ok(definition)

@@ -13,6 +13,4 @@ pub use context::{
 pub use spans::{
     CiAttributes, agent_span, cache_span, run_span, secret_span, stage_span, step_span,
 };
-pub use tracer::{
-    OtlpConfig, Protocol, TracerError, TracingConfig, init_tracer, shutdown_tracer,
-};
+pub use tracer::{OtlpConfig, Protocol, TracerError, TracingConfig, init_tracer, shutdown_tracer};

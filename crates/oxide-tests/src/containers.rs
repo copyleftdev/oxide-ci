@@ -1,7 +1,7 @@
 //! Testcontainer configurations for integration tests.
 
-use testcontainers::{ContainerAsync, ImageExt};
 use testcontainers::runners::AsyncRunner;
+use testcontainers::{ContainerAsync, ImageExt};
 use testcontainers_modules::{minio::MinIO, nats::Nats, postgres::Postgres};
 
 /// PostgreSQL container for database tests.
@@ -13,18 +13,12 @@ pub struct PostgresContainer {
 
 impl PostgresContainer {
     pub async fn start() -> anyhow::Result<Self> {
-        let container = Postgres::default()
-            .with_tag("16-alpine")
-            .start()
-            .await?;
+        let container = Postgres::default().with_tag("16-alpine").start().await?;
 
         let host = container.get_host().await?;
         let port = container.get_host_port_ipv4(5432).await?;
 
-        let connection_string = format!(
-            "postgres://postgres:postgres@{}:{}/postgres",
-            host, port
-        );
+        let connection_string = format!("postgres://postgres:postgres@{}:{}/postgres", host, port);
 
         Ok(Self {
             container,
@@ -76,10 +70,7 @@ pub struct MinioContainer {
 
 impl MinioContainer {
     pub async fn start() -> anyhow::Result<Self> {
-        let container = MinIO::default()
-            .with_tag("latest")
-            .start()
-            .await?;
+        let container = MinIO::default().with_tag("latest").start().await?;
 
         let host = container.get_host().await?;
         let port = container.get_host_port_ipv4(9000).await?;

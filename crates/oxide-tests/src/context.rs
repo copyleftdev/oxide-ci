@@ -45,7 +45,7 @@ impl TestContext {
     /// Create context with only PostgreSQL.
     pub async fn postgres_only() -> anyhow::Result<PostgresOnlyContext> {
         crate::init_test_logging();
-        
+
         let postgres = PostgresContainer::start().await?;
         let db = Database::connect(postgres.connection_string()).await?;
         db.migrate().await?;
@@ -56,7 +56,7 @@ impl TestContext {
     /// Create context with only NATS.
     pub async fn nats_only() -> anyhow::Result<NatsOnlyContext> {
         crate::init_test_logging();
-        
+
         let nats = NatsContainer::start().await?;
         let event_bus = NatsEventBus::connect(nats.url()).await?;
 

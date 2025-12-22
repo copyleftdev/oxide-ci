@@ -1,6 +1,6 @@
 //! Test helper functions and utilities.
 
-use oxide_api::{build_app, AppState};
+use oxide_api::{AppState, build_app};
 use oxide_db::{Database, PgAgentRepository, PgPipelineRepository, PgRunRepository};
 use oxide_nats::NatsEventBus;
 use reqwest::Client;
@@ -112,10 +112,7 @@ where
 }
 
 /// Assert that a future completes within a timeout.
-pub async fn assert_completes_within<F, T>(
-    future: F,
-    timeout: std::time::Duration,
-) -> T
+pub async fn assert_completes_within<F, T>(future: F, timeout: std::time::Duration) -> T
 where
     F: std::future::Future<Output = T>,
 {

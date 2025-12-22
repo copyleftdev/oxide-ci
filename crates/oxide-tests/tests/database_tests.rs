@@ -21,7 +21,9 @@ async fn test_pipeline_crud() {
 
     // Create
     let pipeline = PipelineFixture::simple();
-    repo.create(&pipeline).await.expect("Failed to create pipeline");
+    repo.create(&pipeline)
+        .await
+        .expect("Failed to create pipeline");
 
     // Read
     let found = repo
@@ -36,7 +38,9 @@ async fn test_pipeline_crud() {
     assert_eq!(all.len(), 1);
 
     // Delete
-    repo.delete(pipeline.id).await.expect("Failed to delete pipeline");
+    repo.delete(pipeline.id)
+        .await
+        .expect("Failed to delete pipeline");
     let gone = repo.get(pipeline.id).await.expect("Failed to get pipeline");
     assert!(gone.is_none());
 }
@@ -53,7 +57,9 @@ async fn test_pipeline_list_pagination() {
     for i in 0..5 {
         let mut pipeline = PipelineFixture::simple();
         pipeline.name = format!("pipeline-{}", i);
-        repo.create(&pipeline).await.expect("Failed to create pipeline");
+        repo.create(&pipeline)
+            .await
+            .expect("Failed to create pipeline");
     }
 
     // Test pagination

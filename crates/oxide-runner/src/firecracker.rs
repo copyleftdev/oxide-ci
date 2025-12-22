@@ -300,7 +300,9 @@ impl Environment for FirecrackerEnvironment {
         // Ensure workspace exists
         tokio::fs::create_dir_all(&self.workspace)
             .await
-            .map_err(|e| oxide_core::Error::Internal(format!("Failed to create workspace: {}", e)))?;
+            .map_err(|e| {
+                oxide_core::Error::Internal(format!("Failed to create workspace: {}", e))
+            })?;
 
         // Check if Firecracker is available
         if !Self::is_available().await {

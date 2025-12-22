@@ -26,8 +26,8 @@ pub use helpers::*;
 
 /// Initialize test logging (call once per test binary).
 pub fn init_test_logging() {
-    use tracing_subscriber::{fmt, EnvFilter};
-    
+    use tracing_subscriber::{EnvFilter, fmt};
+
     let _ = fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env()

@@ -146,8 +146,7 @@ mod tests {
 
     #[test]
     fn test_stripe_config() {
-        let config = StripeConfig::new("sk_test_xxx")
-            .with_webhook_secret("whsec_xxx");
+        let config = StripeConfig::new("sk_test_xxx").with_webhook_secret("whsec_xxx");
         assert!(config.webhook_secret.is_some());
     }
 

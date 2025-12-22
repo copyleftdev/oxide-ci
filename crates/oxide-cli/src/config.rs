@@ -33,7 +33,7 @@ pub enum OutputFormat {
 
 impl CliConfig {
     /// Load configuration from file.
-    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let path = Self::config_path()?;
         if path.exists() {
             let content = std::fs::read_to_string(&path)?;
@@ -44,7 +44,7 @@ impl CliConfig {
     }
 
     /// Save configuration to file.
-    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let path = Self::config_path()?;
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -55,7 +55,7 @@ impl CliConfig {
     }
 
     /// Get the configuration file path.
-    pub fn config_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    pub fn config_path() -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
         let dirs = directories::ProjectDirs::from("ci", "oxide", "oxide-cli")
             .ok_or("Could not determine config directory")?;
         Ok(dirs.config_dir().join("config.yaml"))

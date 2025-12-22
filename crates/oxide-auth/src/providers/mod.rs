@@ -35,15 +35,18 @@ impl CloudCredentials {
     pub fn is_expired(&self) -> bool {
         let buffer = chrono::Duration::minutes(5);
         match self {
-            CloudCredentials::Aws(creds) => {
-                creds.expiration.map(|exp| Utc::now() + buffer > exp).unwrap_or(false)
-            }
-            CloudCredentials::Gcp(creds) => {
-                creds.expires_at.map(|exp| Utc::now() + buffer > exp).unwrap_or(false)
-            }
-            CloudCredentials::Azure(creds) => {
-                creds.expires_at.map(|exp| Utc::now() + buffer > exp).unwrap_or(false)
-            }
+            CloudCredentials::Aws(creds) => creds
+                .expiration
+                .map(|exp| Utc::now() + buffer > exp)
+                .unwrap_or(false),
+            CloudCredentials::Gcp(creds) => creds
+                .expires_at
+                .map(|exp| Utc::now() + buffer > exp)
+                .unwrap_or(false),
+            CloudCredentials::Azure(creds) => creds
+                .expires_at
+                .map(|exp| Utc::now() + buffer > exp)
+                .unwrap_or(false),
         }
     }
 }

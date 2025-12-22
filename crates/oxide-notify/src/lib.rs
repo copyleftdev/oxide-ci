@@ -8,9 +8,9 @@ pub mod sender;
 
 pub use channels::{
     AuthType, CardStyle, ChannelConfig, ChannelType, DiscordConfig, EmailConfig, HttpMethod,
-    NotificationChannel, NotificationFilter, NotificationTrigger, OpsGenieConfig,
-    OpsGeniePriority, OpsGenieRegion, PagerDutyConfig, PagerDutySeverity, SlackConfig,
-    TeamsConfig, WebhookAuth, WebhookConfig,
+    NotificationChannel, NotificationFilter, NotificationTrigger, OpsGenieConfig, OpsGeniePriority,
+    OpsGenieRegion, PagerDutyConfig, PagerDutySeverity, SlackConfig, TeamsConfig, WebhookAuth,
+    WebhookConfig,
 };
 pub use sender::{
     DiscordSender, NotificationPayload, NotificationSender, NotifyError, SlackSender,

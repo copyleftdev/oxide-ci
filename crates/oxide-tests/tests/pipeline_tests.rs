@@ -104,11 +104,11 @@ async fn test_parallel_pipeline_dag() {
 
     // Verify DAG structure
     let found = pipeline_repo.get(pipeline.id).await.unwrap().unwrap();
-    
+
     // lint and test have no dependencies (can run in parallel)
     assert!(found.definition.stages[0].depends_on.is_empty());
     assert!(found.definition.stages[1].depends_on.is_empty());
-    
+
     // deploy depends on both lint and test
     assert_eq!(found.definition.stages[2].depends_on.len(), 2);
 }
@@ -165,10 +165,7 @@ async fn test_multiple_runs_for_pipeline() {
     }
 
     // List runs for pipeline
-    let runs = run_repo
-        .list_by_pipeline(pipeline.id, 10, 0)
-        .await
-        .unwrap();
+    let runs = run_repo.list_by_pipeline(pipeline.id, 10, 0).await.unwrap();
 
     assert_eq!(runs.len(), 5);
 }

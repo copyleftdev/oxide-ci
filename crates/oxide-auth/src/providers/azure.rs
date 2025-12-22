@@ -17,14 +17,12 @@ pub struct AzureCredentials {
 }
 
 /// Azure identity configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AzureConfig {
     pub client_id: String,
     pub tenant_id: String,
     pub subscription_id: Option<String>,
 }
-
 
 /// Azure AD Workload Identity Federation token exchange provider.
 pub struct AzureProvider {

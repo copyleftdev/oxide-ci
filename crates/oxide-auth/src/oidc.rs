@@ -25,10 +25,7 @@ impl OidcDiscoveryDocument {
             jwks_uri: jwks_uri.to_string(),
             response_types_supported: vec!["id_token".to_string()],
             subject_types_supported: vec!["public".to_string()],
-            id_token_signing_alg_values_supported: vec![
-                "RS256".to_string(),
-                "ES256".to_string(),
-            ],
+            id_token_signing_alg_values_supported: vec!["RS256".to_string(), "ES256".to_string()],
             claims_supported: vec![
                 "sub".to_string(),
                 "aud".to_string(),
@@ -104,6 +101,9 @@ mod tests {
         );
 
         assert_eq!(doc.issuer, "https://token.oxideci.io");
-        assert!(doc.id_token_signing_alg_values_supported.contains(&"RS256".to_string()));
+        assert!(
+            doc.id_token_signing_alg_values_supported
+                .contains(&"RS256".to_string())
+        );
     }
 }

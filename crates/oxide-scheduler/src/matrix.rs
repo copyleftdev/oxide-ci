@@ -161,14 +161,8 @@ mod tests {
     #[test]
     fn test_matrix_expansion() {
         let mut dimensions = HashMap::new();
-        dimensions.insert(
-            "os".to_string(),
-            serde_json::json!(["linux", "macos"]),
-        );
-        dimensions.insert(
-            "version".to_string(),
-            serde_json::json!(["18", "20", "22"]),
-        );
+        dimensions.insert("os".to_string(), serde_json::json!(["linux", "macos"]));
+        dimensions.insert("version".to_string(), serde_json::json!(["18", "20", "22"]));
 
         let stage = StageDefinition {
             name: "test".to_string(),
@@ -217,14 +211,8 @@ mod tests {
     #[test]
     fn test_matrix_with_exclude() {
         let mut dimensions = HashMap::new();
-        dimensions.insert(
-            "os".to_string(),
-            serde_json::json!(["linux", "macos"]),
-        );
-        dimensions.insert(
-            "arch".to_string(),
-            serde_json::json!(["amd64", "arm64"]),
-        );
+        dimensions.insert("os".to_string(), serde_json::json!(["linux", "macos"]));
+        dimensions.insert("arch".to_string(), serde_json::json!(["amd64", "arm64"]));
 
         let mut exclude = HashMap::new();
         exclude.insert(
