@@ -1,0 +1,40 @@
+name: Plugin System Verification
+version: "1"
+stages:
+  - name: verify-plugins
+    steps:
+      - name: Checkout Test
+        plugin: git-checkout
+        with:
+          repository: https://github.com/octocat/Hello-World.git
+          path: hello-world
+      
+      - name: Verify Checkout
+        run: ls -la hello-world/README
+      
+      - name: Generate Cache Data
+        run: |
+          mkdir -p .cache-test
+          echo "Cached Content" > .cache-test/data.txt
+      
+      - name: Save Cache
+        plugin: cache
+        with:
+          key: unique-cache-key-1
+          paths:
+            - .cache-test
+          method: save
+          
+      - name: Clear Data
+        run: rm -rf .cache-test
+        
+      - name: Restore Cache
+        plugin: cache
+        with:
+          key: unique-cache-key-1
+          paths:
+             - .cache-test
+          method: restore
+          
+      - name: Verify Cache
+        run: cat .cache-test/data.txt

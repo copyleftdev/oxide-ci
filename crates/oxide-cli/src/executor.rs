@@ -18,6 +18,7 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::task::JoinSet;
+use oxide_plugins::{get_builtin_plugin, manifest::PluginCallInput};
 
 use crate::dag::DagBuilder;
 
@@ -539,24 +540,108 @@ async fn execute_step(
         });
     }
 
-    // Handle plugin steps (skip for now, just log)
-    if let Some(ref plugin) = step.plugin {
+    // Handle plugin steps
+    if let Some(ref plugin_name) = step.plugin {
         println!(
             "    [{}/{}] {} (plugin: {})",
             step_num,
             total_steps,
             style(&step.name).bold(),
-            style(plugin).dim()
+            style(plugin_name).dim()
         );
-        println!(
-            "      {} Plugin execution not yet implemented",
-            style("⚠").yellow()
-        );
-        return Ok(StepResult {
-            success: true,
-            exit_code: 0,
-            duration_ms: 0,
-        });
+
+        if let Some(plugin) = get_builtin_plugin(plugin_name) {
+            let start_plugin = std::time::Instant::now();
+            
+            // Prepare inputs
+            let mut params = HashMap::new();
+            for (k, v) in &step.with {
+                 // Interpolate values
+                 let val_str = match v {
+                     serde_json::Value::String(s) => serde_json::Value::String(ctx.interpolate(&s)),
+                     _ => v.clone(),
+                 };
+                 params.insert(k.clone(), val_str);
+            }
+            
+            let mut env = HashMap::new();
+            for (k, v) in &ctx.variables {
+                env.insert(k.clone(), v.clone());
+            }
+            // Add step variables
+            for (k, v) in &step.variables {
+                env.insert(k.clone(), ctx.interpolate(v));
+            }
+
+            let input = PluginCallInput {
+                params,
+                env,
+                workspace: ctx.workspace.to_string_lossy().to_string(),
+                step_name: step.name.clone(),
+            };
+
+            // Execute plugin
+            // TODO: async execution for plugins if needed, for now synchronous trait
+            let result = plugin.execute(&input);
+
+            let duration_ms = start_plugin.elapsed().as_millis() as u64;
+
+            match result {
+                Ok(output) => {
+                    if output.success {
+                        println!(
+                            "      {} ({:.2}s)",
+                            style("✓").green(),
+                            duration_ms as f64 / 1000.0
+                        );
+                        // Capture outputs
+                        for (k, v) in output.outputs {
+                            ctx.set_output(&step.name, &k, v);
+                        }
+                        
+                        return Ok(StepResult {
+                            success: true,
+                            exit_code: 0,
+                            duration_ms,
+                        });
+                    } else {
+                        println!(
+                            "      {} Plugin failed: {} ({:.2}s)",
+                            style("✗").red(),
+                            output.error.unwrap_or_default(),
+                            duration_ms as f64 / 1000.0
+                        );
+                        return Ok(StepResult {
+                            success: false,
+                            exit_code: output.exit_code,
+                            duration_ms,
+                        });
+                    }
+                }
+                Err(e) => {
+                    println!("      {} Plugin error: {}", style("✗").red(), e);
+                     return Ok(StepResult {
+                        success: false,
+                        exit_code: 1,
+                        duration_ms,
+                    });
+                }
+            }
+        } else {
+            println!(
+                "      {} Plugin not found: {}",
+                style("⚠").yellow(),
+                plugin_name
+            );
+             println!(
+                "      (Only built-in plugins git-checkout, cache, docker-build are currently supported)"
+            );
+            return Ok(StepResult {
+                success: false,
+                exit_code: 1,
+                duration_ms: 0,
+            });
+        }
     }
 
     // Handle run steps

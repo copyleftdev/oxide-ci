@@ -214,6 +214,8 @@ pub struct StepDefinition {
     #[serde(default)]
     pub plugin: Option<String>,
     #[serde(default)]
+    pub with: HashMap<String, serde_json::Value>,
+    #[serde(default)]
     pub run: Option<String>,
     #[serde(default = "default_shell")]
     pub shell: String,
