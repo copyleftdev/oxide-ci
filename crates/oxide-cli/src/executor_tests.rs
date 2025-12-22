@@ -177,4 +177,17 @@ mod tests {
         assert!(result.contains("Target: x86_64-linux"));
         assert!(result.contains("Binary: myapp-linux"));
     }
+    #[test]
+    fn test_mask_secrets() {
+        let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
+        ctx.add_secret("API_KEY", "secret-123");
+        ctx.add_secret("PASSWORD", "password456");
+
+        let input = "Connecting with key=secret-123 and pass=password456";
+        let masked = ctx.mask_secrets(input);
+
+        assert_eq!(masked, "Connecting with key=*** and pass=***");
+        assert!(!masked.contains("secret-123"));
+        assert!(!masked.contains("password456"));
+    }
 }
