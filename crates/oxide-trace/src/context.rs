@@ -107,7 +107,7 @@ fn rand_u128() -> u128 {
         .unwrap()
         .as_nanos();
     // Simple PRNG based on time - in production use a proper random source
-    nanos as u128 ^ (nanos.wrapping_mul(0x9E3779B97F4A7C15) as u128)
+    nanos ^ nanos.wrapping_mul(0x9E3779B97F4A7C15)
 }
 
 fn rand_u64() -> u64 {

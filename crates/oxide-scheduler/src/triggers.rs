@@ -149,7 +149,11 @@ impl TriggerMatcher {
             return text.starts_with(prefix);
         }
         if let Some(prefix) = pattern.strip_suffix("/*") {
-            return text.starts_with(prefix) && !text[prefix.len()..].contains('/');
+            let prefix_slash = format!("{}/", prefix);
+            if text.starts_with(&prefix_slash) {
+                return !text[prefix_slash.len()..].contains('/');
+            }
+            return false;
         }
         if pattern.contains('*') {
             let parts: Vec<&str> = pattern.split('*').collect();

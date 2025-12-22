@@ -115,7 +115,7 @@ mod tests {
     fn test_pipeline_id_parse() {
         let id = PipelineId::new();
         let s = id.to_string();
-        let parsed: PipelineId = s.parse().unwrap();
+        let parsed: PipelineId = s.parse().expect("failed to parse generated pipeline id");
         assert_eq!(id, parsed);
     }
 }

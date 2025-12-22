@@ -3,6 +3,7 @@
 use tracing::{span, Level, Span};
 
 /// CI/CD span attributes following OpenTelemetry semantic conventions.
+#[derive(Default)]
 pub struct CiAttributes {
     pub pipeline_id: Option<String>,
     pub pipeline_name: Option<String>,
@@ -19,25 +20,6 @@ pub struct CiAttributes {
     pub author: Option<String>,
 }
 
-impl Default for CiAttributes {
-    fn default() -> Self {
-        Self {
-            pipeline_id: None,
-            pipeline_name: None,
-            run_id: None,
-            run_number: None,
-            stage_name: None,
-            step_name: None,
-            step_plugin: None,
-            agent_id: None,
-            agent_name: None,
-            repository: None,
-            git_ref: None,
-            git_sha: None,
-            author: None,
-        }
-    }
-}
 
 impl CiAttributes {
     pub fn new() -> Self {

@@ -74,14 +74,13 @@ impl ExecutionContext {
         }
 
         // Handle steps.name.outputs.key
-        if let Some(rest) = expr.strip_prefix("steps.") {
-            if let Some(outputs_idx) = rest.find(".outputs.") {
+        if let Some(rest) = expr.strip_prefix("steps.")
+            && let Some(outputs_idx) = rest.find(".outputs.") {
                 let step_name = &rest[..outputs_idx];
                 let output_key = &rest[outputs_idx + 9..]; // ".outputs." is 9 chars
                 let lookup_key = format!("{}.{}", step_name, output_key);
                 return self.outputs.get(&lookup_key).cloned().unwrap_or_default();
             }
-        }
 
         // Direct variable lookup
         self.variables.get(expr).cloned().unwrap_or_default()
@@ -189,11 +188,10 @@ pub async fn execute_pipeline(
 
     for stage in &definition.stages {
         // Filter stages if specified
-        if let Some(filter) = stage_filter {
-            if stage.name != filter {
+        if let Some(filter) = stage_filter
+            && stage.name != filter {
                 continue;
             }
-        }
 
         let stage_result = execute_stage(stage, &mut ctx, config.verbose).await?;
         let success = stage_result.success;

@@ -201,8 +201,8 @@ impl Environment for NixEnvironment {
         }
 
         // If using a flake, ensure it exists or can be fetched
-        if let Some(ref flake) = self.config.flake {
-            if !flake.starts_with("github:")
+        if let Some(ref flake) = self.config.flake
+            && !flake.starts_with("github:")
                 && !flake.starts_with("git+")
                 && !flake.starts_with("path:")
             {
@@ -224,7 +224,6 @@ impl Environment for NixEnvironment {
                     warn!(path = %flake_file.display(), "flake.nix not found");
                 }
             }
-        }
 
         info!("Nix environment prepared");
         Ok(())

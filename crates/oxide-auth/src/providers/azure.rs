@@ -18,21 +18,13 @@ pub struct AzureCredentials {
 
 /// Azure identity configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct AzureConfig {
     pub client_id: String,
     pub tenant_id: String,
     pub subscription_id: Option<String>,
 }
 
-impl Default for AzureConfig {
-    fn default() -> Self {
-        Self {
-            client_id: String::new(),
-            tenant_id: String::new(),
-            subscription_id: None,
-        }
-    }
-}
 
 /// Azure AD Workload Identity Federation token exchange provider.
 pub struct AzureProvider {
