@@ -4,6 +4,7 @@ pub mod compression;
 pub mod keys;
 pub mod provider;
 pub mod types;
+pub mod archiver;
 
 pub use compression::{compress, decompress};
 pub use keys::{generate_key, matches_prefix, sanitize_key};

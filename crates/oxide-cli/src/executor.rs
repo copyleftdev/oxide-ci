@@ -11,6 +11,7 @@ use futures::future::join_all;
 use oxide_core::pipeline::{
     ConditionExpression, PipelineDefinition, StageDefinition, StepDefinition,
 };
+use oxide_cache::{archiver, types::CompressionType};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -366,6 +367,12 @@ pub async fn execute_pipeline(
 
     let duration_ms = start.elapsed().as_millis() as u64;
 
+    if all_success {
+        if let Err(e) = collect_artifacts(definition, &config.workspace).await {
+             println!("{} Failed to collect artifacts: {}", style("⚠").yellow(), e);
+        }
+    }
+
     // Print summary
     println!();
     if all_success {
@@ -540,6 +547,56 @@ async fn execute_stage(
         success: all_success,
         steps: step_results,
     })
+}
+
+/// Collect artifacts based on pipeline definition.
+async fn collect_artifacts(
+    def: &PipelineDefinition,
+    workspace: &Path,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    if let Some(config) = &def.artifacts {
+        if config.paths.is_empty() {
+            return Ok(());
+        }
+
+        println!("\n{} Collecting artifacts...", style("📦").cyan());
+
+        let mut paths = Vec::new();
+        // Simple glob expansion could go here, for now using direct paths
+        for p_str in &config.paths {
+            paths.push(PathBuf::from(p_str));
+        }
+
+        let artifacts_dir = workspace.join("artifacts");
+        tokio::fs::create_dir_all(&artifacts_dir).await?;
+
+        let name = config.name.as_deref().unwrap_or("artifact");
+        let ext = if config.compression == "none" { "tar" } else { "tar.zst" };
+        let filename = format!("{}-{}.{}", name, chrono::Utc::now().format("%Y%m%d-%H%M%S"), ext);
+        let output_path = artifacts_dir.join(&filename);
+
+        println!("  Packing {} paths to {}", paths.len(), output_path.display());
+
+        let compression = match config.compression.as_str() {
+            "zstd" => CompressionType::Zstd,
+            "none" => CompressionType::None,
+            _ => CompressionType::Zstd,
+        };
+
+        let workspace_clone = workspace.to_path_buf();
+        let output_path_clone = output_path.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let file = std::fs::File::create(&output_path_clone)
+                .map_err(|e| oxide_core::Error::Internal(format!("Failed to create artifact file: {}", e)))?;
+            let writer = std::io::BufWriter::new(file);
+            archiver::create_archive(writer, &paths, &workspace_clone, compression)
+        }).await.map_err(|e| oxide_core::Error::Internal(e.to_string()))??;
+
+        let size = tokio::fs::metadata(&output_path).await?.len();
+        println!("  {} Artifact saved ({} bytes)", style("✓").green(), size);
+    }
+    Ok(())
 }
 
 /// Execute a single step with retries and timeout.

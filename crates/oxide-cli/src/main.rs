@@ -19,6 +19,8 @@ mod examples_tests;
 mod retry_tests;
 #[cfg(test)]
 mod cache_tests;
+#[cfg(test)]
+mod artifact_tests;
 
 use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};
 use config::CliConfig;

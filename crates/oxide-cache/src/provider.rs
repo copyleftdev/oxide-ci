@@ -71,27 +71,8 @@ impl CacheProvider for FilesystemProvider {
             tokio::task::spawn_blocking(move || {
                 let file = std::fs::File::open(&path_clone)
                     .map_err(|e| oxide_core::Error::Internal(format!("Failed to open cache file: {}", e)))?;
-                
-                // Auto-detect compression? Or assume Zstd/Gzip based on header?
-                // Or try generic decoder.
-                // For simplicity, let's assume we read the compression type from metadata if we had it,
-                // but `CacheEntry` is inside the file? No, `CacheEntry` is metadata.
-                // In S3 we store metadata. On disk, maybe we need a sidecar metadata file?
-                // Or just try Zstd. 
-                // Let's assum Zstd for now as default.
-                
-                // Detect magic bytes?
                 let reader = std::io::BufReader::new(file);
-                // Wrap in decompressor
-                // We'll support Zstd default.
-                let decoder = zstd::stream::read::Decoder::new(reader)
-                    .map_err(|e| oxide_core::Error::Internal(format!("Failed to create decoder: {}", e)))?;
-                
-                let mut archive = tar::Archive::new(decoder);
-                archive.unpack(&base_dir_clone)
-                    .map_err(|e| oxide_core::Error::Internal(format!("Failed to unpack archive: {}", e)))?;
-                
-                Ok::<(), oxide_core::Error>(())
+                crate::archiver::extract_archive(reader, &base_dir_clone, CompressionType::Zstd)
             }).await.map_err(|e| oxide_core::Error::Internal(e.to_string()))??;
 
             let metadata = tokio::fs::metadata(&key_path)
@@ -135,10 +116,7 @@ impl CacheProvider for FilesystemProvider {
                      tokio::task::spawn_blocking(move || {
                         let file = std::fs::File::open(&path_clone)?;
                         let reader = std::io::BufReader::new(file);
-                        let decoder = zstd::stream::read::Decoder::new(reader)?;
-                        let mut archive = tar::Archive::new(decoder);
-                        archive.unpack(&base_dir_clone)?;
-                        Ok::<(), std::io::Error>(())
+                        crate::archiver::extract_archive(reader, &base_dir_clone, CompressionType::Zstd).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
                      }).await.map_err(|e| oxide_core::Error::Internal(e.to_string()))?
                         .map_err(|e| oxide_core::Error::Internal(format!("Failed to restore backup match: {}", e)))?;
 
@@ -183,52 +161,7 @@ impl CacheProvider for FilesystemProvider {
                 .map_err(|e| oxide_core::Error::Internal(format!("Failed to create cache file: {}", e)))?;
             let writer = std::io::BufWriter::new(file);
 
-            // Compress
-            match compression {
-                CompressionType::Zstd | CompressionType::None => {
-                    // Default to Zstd even if None? Or strict None?
-                    // Let's strict None.
-                    if compression == CompressionType::None {
-                         let mut builder = tar::Builder::new(writer);
-                         for p in &request_paths {
-                             let abs_path = if p.is_absolute() { p.clone() } else { base_dir.join(p) };
-                             if abs_path.exists() {
-                                 if abs_path.is_dir() {
-                                     builder.append_dir_all(p, &abs_path)
-                                         .map_err(|e| oxide_core::Error::Internal(format!("Failed to pack dir: {}", e)))?;
-                                 } else {
-                                     builder.append_path_with_name(&abs_path, p)
-                                         .map_err(|e| oxide_core::Error::Internal(format!("Failed to pack file: {}", e)))?;
-                                 }
-                             }
-                         }
-                         builder.finish().map_err(|e| oxide_core::Error::Internal(format!("Failed to finish tar: {}", e)))?;
-                    } else {
-                        // Zstd
-                        let mut encoder = zstd::stream::write::Encoder::new(writer, 3)
-                            .map_err(|e| oxide_core::Error::Internal(format!("Zstd init failed: {}", e)))?;
-                        {
-                            let mut builder = tar::Builder::new(&mut encoder);
-                            for p in &request_paths {
-                                let abs_path = if p.is_absolute() { p.clone() } else { base_dir.join(p) };
-                                if abs_path.exists() {
-                                    if abs_path.is_dir() {
-                                        builder.append_dir_all(p, &abs_path)
-                                            .map_err(|e| oxide_core::Error::Internal(format!("Failed to pack dir: {}", e)))?;
-                                    } else {
-                                        builder.append_path_with_name(&abs_path, p)
-                                            .map_err(|e| oxide_core::Error::Internal(format!("Failed to pack file: {}", e)))?;
-                                    }
-                                }
-                            }
-                             builder.finish().map_err(|e| oxide_core::Error::Internal(format!("Failed to finish tar: {}", e)))?;
-                        }
-                        encoder.finish().map_err(|e| oxide_core::Error::Internal(format!("Zstd finish failed: {}", e)))?;
-                    }
-                },
-                _ => return Err(oxide_core::Error::Internal("Unsupported compression for filesystem save".into())),
-            }
-            Ok::<(), oxide_core::Error>(())
+            crate::archiver::create_archive(writer, &request_paths, &base_dir, compression)
         }).await.map_err(|e| oxide_core::Error::Internal(e.to_string()))??;
 
         let metadata = tokio::fs::metadata(&key_path)
