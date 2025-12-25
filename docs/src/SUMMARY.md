@@ -7,3 +7,4 @@
     - [Configuration](configuration.md)
 - [Architecture](architecture.md)
     - [Plugin System](plugins.md)
+    - [Crate Ecosystem](crates.md)

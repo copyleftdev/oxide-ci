@@ -1,48 +1,37 @@
-# Crate Overview
+# Crate Ecosystem
 
-## Core
+Oxide CI is a modular workspace consisting of specific-purpose crates.
 
+## Core Services
 | Crate | Description |
 |-------|-------------|
-| `oxide-core` | Domain types, IDs, events, traits |
-| `oxide-spec` | AsyncAPI spec validation and correlation |
+| **`oxide-core`** | Defines shared types (`Pipeline`, `Run`), traits (`EventBus`), and interpolation logic. The foundation of the system. |
+| **`oxide-api`** | The API Server (REST/gRPC) handling requests from the CLI and Web UI. |
+| **`oxide-scheduler`** | Orchestrates pipeline execution, resolves DAG dependencies, and assigns jobs to agents. |
+| **`oxide-agent`** | The worker process that connects to the fleet and executes assigned jobs. |
+| **`oxide-runner`** | The step execution engine. Handles Docker containers, plugins, and process isolation. |
 
-## Infrastructure
-
+## Infrastructure & Support
 | Crate | Description |
 |-------|-------------|
-| `oxide-api` | Axum HTTP/WebSocket server |
-| `oxide-nats` | NATS JetStream event bus |
-| `oxide-db` | SQLx PostgreSQL layer |
-| `oxide-cache` | Distributed caching (S3, Redis) |
+| **`oxide-cli`** | The command-line interface tool (`oxide`). |
+| **`oxide-plugins`** | Implements the plugin system, hosting both Native (`git`, `cache`) and WASM plugins. |
+| **`oxide-db`** | Database abstraction layer (PostgreSQL) and migrations. |
+| **`oxide-nats`** | NATS-based event bus implementation for messaging. |
+| **`oxide-auth`** | Authentication and authorization logic. |
+| **`oxide-licensing`** | License verification and management. |
+| **`oxide-spec`** | Formal specifications and schemas. |
 
-## Execution
-
+## Feature Modules
 | Crate | Description |
 |-------|-------------|
-| `oxide-scheduler` | Pipeline scheduling |
-| `oxide-agent` | Build agent |
-| `oxide-runner` | Step execution engine |
-| `oxide-plugins` | WASM plugin host (Extism) |
+| **`oxide-secrets`** | Secure vault for managing pipeline secrets and credentials. |
+| **`oxide-cache`** | Manages build caches and artifact storage (S3/MinIO). |
+| **`oxide-billing`** | Usage metering and billing verification (GitHub Actions integration). |
+| **`oxide-trace`** | OpenTelemetry integration for tracing and observability. |
+| **`oxide-notify`** | Notification delivery system (Email, Slack, Webhooks). |
 
-## Integrations
-
+## Testing
 | Crate | Description |
 |-------|-------------|
-| `oxide-auth` | OIDC token exchange (AWS, GCP, Azure) |
-| `oxide-secrets` | Secret providers (Vault, AWS SM) |
-| `oxide-notify` | Notifications (Slack, Discord, PagerDuty) |
-| `oxide-billing` | Stripe metered billing |
-| `oxide-licensing` | Keygen license validation |
-
-## Observability
-
-| Crate | Description |
-|-------|-------------|
-| `oxide-trace` | OpenTelemetry distributed tracing |
-
-## Generate Docs
-
-```bash
-cargo doc --workspace --no-deps --open
-```
+| **`oxide-tests`** | shared integration test suite and fixtures. |
