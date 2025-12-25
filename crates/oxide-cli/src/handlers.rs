@@ -65,8 +65,10 @@ pub async fn run_pipeline(
     _branch: Option<String>,
     _wait: bool,
     _watch: bool,
+    secrets: Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use crate::executor::{self, ExecutorConfig};
+
 
     // Find pipeline file
     let pipeline_path = executor::find_pipeline_file(pipeline.as_deref());
@@ -88,7 +90,27 @@ pub async fn run_pipeline(
     let definition = executor::load_pipeline(&path)?;
 
     // Execute locally
-    let exec_config = ExecutorConfig::default();
+    let mut exec_config = ExecutorConfig::default();
+
+    // Load secrets from .env if present
+    if let Ok(content) = std::fs::read_to_string(".env") {
+         println!("{} Loading secrets from .env", style("•").dim());
+         for line in content.lines() {
+             let line = line.trim();
+             if line.is_empty() || line.starts_with('#') { continue; }
+             if let Some((k, v)) = line.split_once('=') {
+                 exec_config.secrets.insert(k.trim().to_string(), v.trim().to_string());
+             }
+         }
+    }
+
+    // Load CLI secrets
+    for s in secrets {
+        if let Some((k, v)) = s.split_once('=') {
+            exec_config.secrets.insert(k.trim().to_string(), v.trim().to_string());
+        }
+    }
+
     let result = executor::execute_pipeline(&definition, &exec_config, None).await?;
 
     if !result.success {

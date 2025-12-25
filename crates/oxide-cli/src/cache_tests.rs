@@ -36,6 +36,7 @@ stages:
     let config_save = ExecutorConfig {
         workspace: temp_ws_save.path().to_path_buf(),
         variables: std::collections::HashMap::new(),
+        secrets: std::collections::HashMap::new(),
         verbose: true,
     };
 
@@ -85,6 +86,7 @@ stages:
     let config_restore = ExecutorConfig {
         workspace: temp_ws_restore.path().to_path_buf(),
         variables: std::collections::HashMap::new(),
+        secrets: std::collections::HashMap::new(),
         verbose: true,
     };
 

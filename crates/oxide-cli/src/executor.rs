@@ -224,6 +224,7 @@ pub struct PipelineResult {
 pub struct ExecutorConfig {
     pub workspace: PathBuf,
     pub variables: HashMap<String, String>,
+    pub secrets: HashMap<String, String>,
     pub verbose: bool,
 }
 
@@ -232,6 +233,7 @@ impl Default for ExecutorConfig {
         Self {
             workspace: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             variables: HashMap::new(),
+            secrets: HashMap::new(),
             verbose: false,
         }
     }
@@ -250,6 +252,7 @@ pub async fn execute_pipeline(
     // Initialize execution context
     let mut ctx = ExecutionContext::new(config.workspace.clone());
     ctx.variables = config.variables.clone();
+    ctx.secrets = config.secrets.clone();
 
     // Merge pipeline variables
     for (k, v) in &definition.variables {

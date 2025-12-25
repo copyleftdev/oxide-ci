@@ -48,7 +48,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             branch,
             wait,
             watch,
-        } => handlers::run_pipeline(&config, pipeline, branch, wait, watch).await?,
+            secrets,
+        } => handlers::run_pipeline(&config, pipeline, branch, wait, watch, secrets).await?,
         Commands::Logs { run_id, follow } => handlers::logs(&config, &run_id, follow).await?,
         Commands::Cancel { run_id } => handlers::cancel(&config, &run_id).await?,
         Commands::Agents { command } => match command {

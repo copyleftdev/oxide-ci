@@ -3,7 +3,7 @@ mod tests {
     use crate::executor::{ExecutorConfig, execute_pipeline};
     use oxide_core::pipeline::{PipelineDefinition, StageDefinition, StepDefinition};
     use std::collections::HashMap;
-    use std::path::PathBuf;
+
 
     fn make_sleep_step(name: &str, seconds: u32) -> StepDefinition {
         StepDefinition {
@@ -62,9 +62,11 @@ mod tests {
             concurrency: None,
         };
 
+        let temp_ws = tempfile::tempdir().unwrap();
         let config = ExecutorConfig {
-            workspace: PathBuf::from("."),
-            variables: HashMap::new(),
+            workspace: temp_ws.path().to_path_buf(),
+            variables: std::collections::HashMap::new(),
+            secrets: std::collections::HashMap::new(),
             verbose: true,
         };
 

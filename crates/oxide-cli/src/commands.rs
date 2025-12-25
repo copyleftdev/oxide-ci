@@ -30,6 +30,10 @@ pub enum Commands {
         /// Stream logs
         #[arg(long)]
         watch: bool,
+
+        /// Secrets to inject (KEY=VALUE)
+        #[arg(long, value_name = "KEY=VALUE")]
+        secrets: Vec<String>,
     },
 
     /// View run logs

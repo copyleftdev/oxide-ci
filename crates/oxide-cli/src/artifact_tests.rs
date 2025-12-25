@@ -27,6 +27,7 @@ stages:
     let config = ExecutorConfig {
         workspace: temp_ws.path().to_path_buf(),
         variables: std::collections::HashMap::new(),
+        secrets: std::collections::HashMap::new(),
         verbose: true,
     };
 
