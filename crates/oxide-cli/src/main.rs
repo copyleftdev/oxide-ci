@@ -15,6 +15,8 @@ mod executor_tests;
 mod parallel_tests;
 #[cfg(test)]
 mod examples_tests;
+#[cfg(test)]
+mod retry_tests;
 
 use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};
 use config::CliConfig;

@@ -18,6 +18,7 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::task::JoinSet;
+use tokio::time::{sleep, timeout, Duration};
 use oxide_plugins::{get_builtin_plugin, manifest::PluginCallInput};
 
 use crate::dag::DagBuilder;
@@ -541,17 +542,97 @@ async fn execute_stage(
     })
 }
 
-/// Execute a single step.
+/// Execute a single step with retries and timeout.
 async fn execute_step(
+    step: &StepDefinition,
+    ctx: &mut ExecutionContext,
+    verbose: bool,
+    step_num: usize,
+    total_steps: usize,
+) -> Result<StepResult, Box<dyn std::error::Error + Send + Sync>> {
+    let max_attempts = step.retry.as_ref().map(|r| r.max_attempts).unwrap_or(1).max(1);
+    let delay_seconds = step.retry.as_ref().map(|r| r.delay_seconds).unwrap_or(10) as u64;
+    let exponential_backoff = step.retry.as_ref().map(|r| r.exponential_backoff).unwrap_or(true);
+    let retry_on = step.retry.as_ref().map(|r| &r.retry_on);
+
+    let mut last_result = StepResult {
+        success: false,
+        exit_code: 1,
+        duration_ms: 0,
+    };
+
+    for attempt in 1..=max_attempts {
+        if attempt > 1 {
+            println!(
+                "    {} Retrying step {} (attempt {}/{})",
+                style("↻").yellow(),
+                style(&step.name).bold(),
+                attempt,
+                max_attempts
+            );
+        }
+
+        let result = execute_step_attempt(step, ctx, verbose, step_num, total_steps, attempt).await;
+
+        match result {
+            Ok(step_res) => {
+                last_result = step_res;
+                if last_result.success {
+                    return Ok(last_result);
+                }
+
+                // Check if we should retry
+                if attempt < max_attempts {
+                    let should_retry = if let Some(conditions) = retry_on {
+                        if conditions.is_empty() {
+                            true // Default to retry on any failure if struct is present but list empty?
+                                 // Schema says defaults. If explicit empty list, maybe user meant no retry?
+                                 // Using "any failure" is safer if they enabled retry.
+                        } else {
+                            conditions.iter().any(|c| {
+                                c == "failure"
+                                    || (c == "timeout" && last_result.exit_code == -1 && last_result.duration_ms >= (step.timeout_minutes as u64 * 60 * 1000))
+                                    || c == &last_result.exit_code.to_string()
+                            })
+                        }
+                    } else {
+                        // If no retry config, we shouldn't be in loop > 1 basically, but max_attempts=1 covers it.
+                        // If max_attempts > 1 but no specific conditions, implies retry on failure.
+                        true
+                    };
+
+                    if should_retry {
+                        let sleep_duration = if exponential_backoff {
+                            Duration::from_secs(delay_seconds * 2u64.pow(attempt - 1))
+                        } else {
+                            Duration::from_secs(delay_seconds)
+                        };
+                        sleep(sleep_duration).await;
+                        continue;
+                    }
+                }
+            }
+            Err(e) => return Err(e),
+        }
+        break;
+    }
+
+    Ok(last_result)
+}
+
+async fn execute_step_attempt(
     step: &StepDefinition,
     ctx: &mut ExecutionContext,
     _verbose: bool,
     step_num: usize,
     total_steps: usize,
+    attempt: u32,
 ) -> Result<StepResult, Box<dyn std::error::Error + Send + Sync>> {
     let start = std::time::Instant::now();
 
-    // Evaluate step condition
+    // Evaluate step condition (only on first attempt ideally? Or re-evaluate?)
+    // Re-evaluating is fine but side-effects?
+    // Let's assume re-evaluation is correct as context might change? No, context is per-run.
     if let Some(condition) = &step.condition
         && !ctx.evaluate_condition(condition)
     {
@@ -570,13 +651,15 @@ async fn execute_step(
 
     // Handle plugin steps
     if let Some(ref plugin_name) = step.plugin {
-        println!(
-            "    [{}/{}] {} (plugin: {})",
-            step_num,
-            total_steps,
-            style(&step.name).bold(),
-            style(plugin_name).dim()
-        );
+        if attempt == 1 {
+            println!(
+                "    [{}/{}] {} (plugin: {})",
+                step_num,
+                total_steps,
+                style(&step.name).bold(),
+                style(plugin_name).dim()
+            );
+        }
 
         if let Some(plugin) = get_builtin_plugin(plugin_name) {
             let start_plugin = std::time::Instant::now();
@@ -609,7 +692,7 @@ async fn execute_step(
             };
 
             // Execute plugin
-            // TODO: async execution for plugins if needed, for now synchronous trait
+            // TODO: async execution and timeout support for plugins
             let result = plugin.execute(&input);
 
             let duration_ms = start_plugin.elapsed().as_millis() as u64;
@@ -687,12 +770,14 @@ async fn execute_step(
         });
     };
 
-    println!(
-        "    [{}/{}] {}",
-        step_num,
-        total_steps,
-        style(&step.name).bold()
-    );
+    if attempt == 1 {
+        println!(
+            "    [{}/{}] {}",
+            step_num,
+            total_steps,
+            style(&step.name).bold()
+        );
+    }
 
     // Interpolate the script with context variables
     let script = ctx.interpolate(script);
@@ -762,14 +847,33 @@ async fn execute_step(
         }
     });
 
-    // Wait for process
-    let status = child.wait().await?;
+    // Wait for process with timeout
+    let timeout_duration = if step.timeout_minutes > 0 {
+        Duration::from_secs(step.timeout_minutes as u64 * 60)
+    } else {
+        Duration::from_secs(30 * 60) // Default 30 min if 0 (though default is 30 in struct)
+    };
+
+    let status_res = match timeout(timeout_duration, child.wait()).await {
+        Ok(res) => res.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>),
+        Err(_) => {
+            let _ = child.kill().await;
+            Err(Box::from("Step timed out"))
+        }
+    };
+
     let _ = stdout_handle.await;
     let _ = stderr_handle.await;
 
     let duration_ms = start.elapsed().as_millis() as u64;
-    let exit_code = status.code().unwrap_or(-1);
-    let success = status.success();
+
+    let (success, exit_code) = match status_res {
+        Ok(status) => (status.success(), status.code().unwrap_or(-1)),
+        Err(e) => {
+            println!("      {} {}", style("✗").red(), e);
+            (false, -1)
+        }
+    };
 
     // Parse step outputs from OXIDE_OUTPUT file
     if output_file.exists() {
