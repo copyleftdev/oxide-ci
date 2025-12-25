@@ -105,6 +105,22 @@ pub trait AgentRepository: Send + Sync {
     async fn get_stale(&self, threshold_seconds: u64) -> Result<Vec<Agent>>;
 }
 
+/// Repository for approval gates.
+#[async_trait]
+pub trait ApprovalRepository: Send + Sync {
+    /// Create a new approval gate.
+    async fn create(&self, gate: &crate::approval::ApprovalGate) -> Result<()>;
+
+    /// Get a gate by ID.
+    async fn get(&self, id: ApprovalGateId) -> Result<Option<crate::approval::ApprovalGate>>;
+
+    /// Update a gate.
+    async fn update(&self, gate: &crate::approval::ApprovalGate) -> Result<()>;
+
+    /// List gates, optionally filtering by run ID.
+    async fn list(&self, run_id: Option<RunId>) -> Result<Vec<crate::approval::ApprovalGate>>;
+}
+
 /// Secret provider for retrieving secrets from various backends.
 #[async_trait]
 pub trait SecretProvider: Send + Sync {

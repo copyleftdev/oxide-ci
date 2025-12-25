@@ -17,6 +17,7 @@ pub async fn start_test_server(
         Arc::new(PgPipelineRepository::new(db.pool().clone())),
         Arc::new(PgRunRepository::new(db.pool().clone())),
         Arc::new(PgAgentRepository::new(db.pool().clone())),
+        Arc::new(MockApprovalRepository),
         Arc::new(event_bus),
     ));
 
@@ -33,6 +34,29 @@ pub async fn start_test_server(
 
     Ok((addr, handle))
 }
+
+pub struct MockApprovalRepository;
+
+#[async_trait::async_trait]
+impl oxide_core::ports::ApprovalRepository for MockApprovalRepository {
+    async fn create(&self, _gate: &oxide_core::approval::ApprovalGate) -> oxide_core::Result<()> {
+        Ok(())
+    }
+
+    async fn get(&self, _id: oxide_core::ids::ApprovalGateId) -> oxide_core::Result<Option<oxide_core::approval::ApprovalGate>> {
+        Ok(None)
+    }
+
+    async fn update(&self, _gate: &oxide_core::approval::ApprovalGate) -> oxide_core::Result<()> {
+        Ok(())
+    }
+
+    async fn list(&self, _run_id: Option<oxide_core::ids::RunId>) -> oxide_core::Result<Vec<oxide_core::approval::ApprovalGate>> {
+        Ok(vec![])
+    }
+}
+
+
 
 /// Create an HTTP client for testing.
 pub fn test_client() -> Client {

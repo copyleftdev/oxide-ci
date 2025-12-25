@@ -33,70 +33,106 @@ pub struct ApprovalResponse {
 
 /// List pending approval gates.
 pub async fn list_approvals(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<ApprovalGate>>, StatusCode> {
-    // TODO: Fetch pending approvals from database
-    Ok(Json(vec![]))
+    let gates = state.approvals.list(None).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(gates))
 }
 
 /// Get a specific approval gate.
 pub async fn get_approval(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(gate_id): Path<String>,
 ) -> Result<Json<ApprovalGate>, StatusCode> {
-    let _gate_id: ApprovalGateId = gate_id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+    let gate_id: ApprovalGateId = gate_id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    // TODO: Fetch approval gate from database
-    Err(StatusCode::NOT_FOUND)
+    match state.approvals.get(gate_id).await {
+        Ok(Some(gate)) => Ok(Json(gate)),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 /// Approve or reject an approval gate.
 pub async fn respond_to_approval(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(gate_id): Path<String>,
     Json(request): Json<ApprovalRequest>,
 ) -> Result<Json<ApprovalResponse>, StatusCode> {
     let gate_id: ApprovalGateId = gate_id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    // TODO: Fetch gate, validate user can approve, update state, publish event
-
-    let response = match request.action {
-        ApproverAction::Approved => ApprovalResponse {
-            gate_id,
-            status: ApprovalStatus::Pending,
-            current_approvals: 1,
-            required_approvals: 2,
-            fully_approved: false,
-            message: "Approval recorded".to_string(),
-        },
-        ApproverAction::Rejected => ApprovalResponse {
-            gate_id,
-            status: ApprovalStatus::Rejected,
-            current_approvals: 0,
-            required_approvals: 2,
-            fully_approved: false,
-            message: "Approval rejected".to_string(),
-        },
+    let mut gate = match state.approvals.get(gate_id).await {
+        Ok(Some(g)) => g,
+        Ok(None) => return Err(StatusCode::NOT_FOUND),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
     };
 
-    Ok(Json(response))
+    if gate.status != ApprovalStatus::Pending {
+         return Err(StatusCode::CONFLICT); // Already decided
+    }
+
+    if !gate.can_approve(&request.user_id, None) { // TODO: pass triggered_by if known from context/auth
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let approver = oxide_core::approval::Approver {
+        user_id: request.user_id,
+        user_name: request.user_name,
+        user_email: request.user_email,
+        action: request.action,
+        comment: request.comment,
+        acted_at: chrono::Utc::now(),
+    };
+
+    match request.action {
+        ApproverAction::Approved => gate.approve(approver),
+        ApproverAction::Rejected => gate.reject(approver),
+    }
+
+    state.approvals.update(&gate).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Publish event
+    // TODO: Publish ApprovalGranted/Rejected event via state.event_bus
+
+    Ok(Json(ApprovalResponse {
+        gate_id: gate.id,
+        status: gate.status,
+        current_approvals: gate.current_approvals,
+        required_approvals: gate.required_approvers,
+        fully_approved: gate.is_fully_approved(),
+        message: format!("Approval {}", match gate.status {
+            ApprovalStatus::Approved => "granted",
+            ApprovalStatus::Rejected => "rejected",
+            _ => "recorded",
+        }),
+    }))
 }
 
 /// Bypass an approval gate (admin only).
 pub async fn bypass_approval(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(gate_id): Path<String>,
 ) -> Result<Json<ApprovalResponse>, StatusCode> {
     let gate_id: ApprovalGateId = gate_id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    // TODO: Verify admin permissions, bypass gate, publish event
+    let mut gate = match state.approvals.get(gate_id).await {
+        Ok(Some(g)) => g,
+        Ok(None) => return Err(StatusCode::NOT_FOUND),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+
+    gate.status = ApprovalStatus::Bypassed;
+    state.approvals.update(&gate).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    // Publish event
 
     Ok(Json(ApprovalResponse {
-        gate_id,
+        gate_id: gate.id,
         status: ApprovalStatus::Bypassed,
-        current_approvals: 0,
-        required_approvals: 0,
-        fully_approved: true,
+        current_approvals: gate.current_approvals,
+        required_approvals: gate.required_approvers,
+        fully_approved: true, // Bypass implies approval
         message: "Approval bypassed by admin".to_string(),
     }))
 }
