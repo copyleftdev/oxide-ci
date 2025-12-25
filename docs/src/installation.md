@@ -19,7 +19,7 @@ The binary will be located at `target/release/oxide`.
 
 ## Installation (Local)
 
-You can install the CLI locally:
+You can install the CLI locally from source (as it is not yet on crates.io):
 
 ```bash
 cargo install --path crates/oxide-cli

@@ -31,7 +31,7 @@ Oxide CI is designed to solve the complexity and slowness of modern CI systems. 
 ## 📦 quick start
 
 ```bash
-# Install CLI
+# Install from Source (Not yet on crates.io)
 cargo install --path crates/oxide-cli
 
 # Run a pipeline
