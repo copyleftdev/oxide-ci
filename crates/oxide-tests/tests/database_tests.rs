@@ -151,7 +151,7 @@ async fn test_concurrent_writes() {
             tokio::spawn(async move {
                 let mut pipeline = PipelineFixture::simple();
                 pipeline.name = format!("concurrent-{}", i);
-                repo.create(&pipeline).await
+                repo.create(&pipeline.definition).await
             })
         })
         .collect();

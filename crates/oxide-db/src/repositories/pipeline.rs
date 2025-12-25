@@ -8,6 +8,7 @@ use oxide_core::{Error, Result};
 use sqlx::{PgPool, Row};
 
 /// PostgreSQL implementation of PipelineRepository.
+#[derive(Clone)]
 pub struct PgPipelineRepository {
     pool: PgPool,
 }

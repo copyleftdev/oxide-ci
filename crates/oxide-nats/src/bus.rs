@@ -20,6 +20,7 @@ use crate::health::HealthCheck;
 use crate::metrics::NatsMetrics;
 
 /// NATS-based event bus using JetStream for durability.
+#[derive(Clone)]
 pub struct NatsEventBus {
     client: async_nats::Client,
     jetstream: jetstream::Context,
