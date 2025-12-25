@@ -129,13 +129,19 @@ pub async fn logs(
     println!("Fetching logs for run {}...", style(run_id).bold());
     println!("  API URL: {}", config.api_url);
 
+    let client = crate::client::ApiClient::new(config);
+    
     if follow {
         println!("  Following logs (Ctrl+C to stop)...");
-        // TODO: Stream logs via WebSocket
+        // TODO: WebSocket streaming requires different client logic or client.stream_logs()
+        // For now, falling back to simple fetch
     }
 
-    // TODO: Fetch and display logs
-    println!("{} No logs available yet", style("i").blue());
+    match client.get_logs(run_id).await {
+        Ok(logs) => println!("{}", logs),
+        Err(e) => println!("{} Failed to fetch logs: {}", style("✗").red(), e),
+    }
+
     Ok(())
 }
 
@@ -145,10 +151,12 @@ pub async fn cancel(
     run_id: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Cancelling run {}...", style(run_id).bold());
-    println!("  API URL: {}", config.api_url);
+    let client = crate::client::ApiClient::new(config);
 
-    // TODO: Make API call to cancel run
-    println!("{} Run cancelled", style("✓").green());
+    match client.cancel_run(run_id).await {
+        Ok(_) => println!("{} Run cancelled", style("✓").green()),
+        Err(e) => println!("{} Failed to cancel run: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
@@ -157,10 +165,21 @@ pub async fn list_agents(
     config: &CliConfig,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Listing agents...");
-    println!("  API URL: {}", config.api_url);
+    let client = crate::client::ApiClient::new(config);
 
-    // TODO: Fetch and display agents
-    println!("{} No agents registered", style("i").blue());
+    match client.list_agents().await {
+        Ok(agents) => {
+            if agents.is_empty() {
+                println!("{} No agents registered", style("i").blue());
+            } else {
+                println!("{:<36} {:<20} {:<10}", "ID", "NAME", "STATUS");
+                for agent in agents {
+                    println!("{:<36} {:<20} {:<10}", agent.id, agent.name, agent.status);
+                }
+            }
+        }
+        Err(e) => println!("{} Failed to list agents: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
@@ -170,10 +189,12 @@ pub async fn drain_agent(
     agent_id: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Draining agent {}...", style(agent_id).bold());
-    println!("  API URL: {}", config.api_url);
+    let client = crate::client::ApiClient::new(config);
 
-    // TODO: Make API call to drain agent
-    println!("{} Agent draining", style("✓").green());
+    match client.drain_agent(agent_id).await {
+        Ok(_) => println!("{} Agent draining/deregistered", style("✓").green()),
+        Err(e) => println!("{} Failed to drain agent: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
@@ -192,8 +213,11 @@ pub async fn set_secret(
     println!("  API URL: {}", config.api_url);
     println!("  Value length: {} chars", value.len());
 
-    // TODO: Make API call to set secret
-    println!("{} Secret {} created", style("✓").green(), name);
+    let client = crate::client::ApiClient::new(config);
+    match client.set_secret(name, &value).await {
+        Ok(_) => println!("{} Secret {} created", style("✓").green(), name),
+        Err(e) => println!("{} Failed to set secret: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
@@ -202,16 +226,26 @@ pub async fn list_secrets(
     config: &CliConfig,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Listing secrets...");
-    println!("  API URL: {}", config.api_url);
+    let client = crate::client::ApiClient::new(config);
 
-    // TODO: Fetch and display secrets
-    println!("{} No secrets configured", style("i").blue());
+    match client.list_secrets().await {
+        Ok(secrets) => {
+             if secrets.is_empty() {
+                println!("{} No secrets configured", style("i").blue());
+            } else {
+                for name in secrets {
+                    println!("{}", name);
+                }
+            }
+        }
+        Err(e) => println!("{} Failed to list secrets: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
 /// Delete a secret.
 pub async fn delete_secret(
-    _config: &CliConfig,
+    config: &CliConfig,
     name: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use dialoguer::Confirm;
@@ -227,9 +261,12 @@ pub async fn delete_secret(
     }
 
     println!("Deleting secret {}...", style(name).bold());
+    let client = crate::client::ApiClient::new(config);
 
-    // TODO: Make API call to delete secret
-    println!("{} Secret {} deleted", style("✓").green(), name);
+    match client.delete_secret(name).await {
+        Ok(_) => println!("{} Secret {} deleted", style("✓").green(), name),
+        Err(e) => println!("{} Failed to delete secret: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
@@ -238,10 +275,20 @@ pub async fn list_cache(
     config: &CliConfig,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Listing cache entries...");
-    println!("  API URL: {}", config.api_url);
+    let client = crate::client::ApiClient::new(config);
 
-    // TODO: Fetch and display cache entries
-    println!("{} No cache entries", style("i").blue());
+    match client.list_cache().await {
+        Ok(entries) => {
+             if entries.is_empty() {
+                println!("{} No cache entries", style("i").blue());
+            } else {
+                for key in entries {
+                    println!("{}", key);
+                }
+            }
+        }
+        Err(e) => println!("{} Failed to list cache: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
@@ -256,8 +303,11 @@ pub async fn clear_cache(
     }
     println!("  API URL: {}", config.api_url);
 
-    // TODO: Make API call to clear cache
-    println!("{} Cache cleared", style("✓").green());
+    let client = crate::client::ApiClient::new(config);
+    match client.clear_cache(prefix.as_deref()).await {
+        Ok(_) => println!("{} Cache cleared", style("✓").green()),
+        Err(e) => println!("{} Failed to clear cache: {}", style("✗").red(), e),
+    }
     Ok(())
 }
 
