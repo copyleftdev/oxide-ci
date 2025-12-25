@@ -1,5 +1,7 @@
 # Architecture
 
+![Architecture](media/architecture.png)
+
 Oxide CI is composed of several modular crates.
 
 ## Core Components

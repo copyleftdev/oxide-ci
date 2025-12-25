@@ -40,6 +40,8 @@ oxide run .oxide-ci/pipeline.yaml
 
 ## 🎨 Architecture
 
+![Architecture](docs/media/architecture.png)
+
 Oxide CI functions via a modular architecture:
 - **Core**: Shared logic and event bus.
 - **Agent**: Distributed execution workers.
