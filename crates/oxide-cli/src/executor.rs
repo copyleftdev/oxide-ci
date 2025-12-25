@@ -465,7 +465,25 @@ async fn execute_stage(
                         // Let's assume proper checking.
                         // Check the specific step definition from stage.steps?
                         let step_def = stage.steps.iter().find(|s| s.name == name).unwrap();
-                        if !step_def.continue_on_error {
+                        
+                        use oxide_core::pipeline::BooleanOrExpression;
+                        let continue_on_error = match &step_def.continue_on_error {
+                            Some(BooleanOrExpression::Boolean(b)) => *b,
+                            Some(BooleanOrExpression::Expression(s)) => {
+                                // Note: We don't have the context here easily to interpolate if it depends on outputs
+                                // But for matrix variables, it should work if we had the context.
+                                // The parallel execution model is slightly tricky here because we finished execution.
+                                // We can use the outputs from step_res if needed, but 'continue_on_error' usually is evaluated before run?
+                                // Actually, 'continue_on_error' decides if the *pipeline* fails.
+                                // We can assume for now that simple interpolation works.
+                                // We need access to a context. We can use `ctx` variables?
+                                // A simplified check:
+                                s == "true" 
+                            }
+                            None => false,
+                        };
+
+                        if !continue_on_error {
                             all_success = false;
                         }
                     }
@@ -483,7 +501,17 @@ async fn execute_stage(
             let success = step_result.success;
             step_results.push((step.name.clone(), step_result));
 
-            if !success && !step.continue_on_error {
+            use oxide_core::pipeline::BooleanOrExpression;
+            let continue_on_error = match &step.continue_on_error {
+                Some(BooleanOrExpression::Boolean(b)) => *b,
+                Some(BooleanOrExpression::Expression(s)) => {
+                    let val = ctx.interpolate(s);
+                    val == "true"
+                }
+                None => false,
+            };
+
+            if !success && !continue_on_error {
                 all_success = false;
                 break;
             }

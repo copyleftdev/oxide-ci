@@ -7,6 +7,7 @@ mod tests {
 
     fn make_sleep_step(name: &str, seconds: u32) -> StepDefinition {
         StepDefinition {
+            with: Default::default(),
             name: name.to_string(),
             display_name: None,
             plugin: None,
@@ -19,7 +20,7 @@ mod tests {
             condition: None,
             timeout_minutes: 1,
             retry: None,
-            continue_on_error: false,
+            continue_on_error: None,
             outputs: vec![],
         }
     }

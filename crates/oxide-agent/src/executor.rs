@@ -94,7 +94,17 @@ impl JobExecutor {
                     Err(e) => {
                         error!(step = %step.name, error = %e, "Step failed");
                         steps_failed += 1;
-                        if !step.continue_on_error {
+                        use oxide_core::pipeline::BooleanOrExpression;
+                        let continue_on_error = match &step.continue_on_error {
+                            Some(BooleanOrExpression::Boolean(b)) => *b,
+                            Some(BooleanOrExpression::Expression(s)) => {
+                                // Simplified interpolation for agent (TODO: full context support)
+                                s == "true"
+                            }
+                            None => false,
+                        };
+
+                        if !continue_on_error {
                             success = false;
                             error_msg = Some(e.to_string());
                             break;

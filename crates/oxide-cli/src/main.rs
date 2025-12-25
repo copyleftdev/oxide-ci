@@ -13,6 +13,8 @@ mod matrix;
 mod executor_tests;
 #[cfg(test)]
 mod parallel_tests;
+#[cfg(test)]
+mod examples_tests;
 
 use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};
 use config::CliConfig;

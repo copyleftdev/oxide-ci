@@ -155,6 +155,7 @@ mod tests {
             environment: None,
             variables: Default::default(),
             steps: vec![StepDefinition {
+                with: Default::default(),
                 name: "run".to_string(),
                 display_name: None,
                 plugin: None,
@@ -167,7 +168,7 @@ mod tests {
                 condition: None,
                 timeout_minutes: 30,
                 retry: None,
-                continue_on_error: false,
+                continue_on_error: None,
                 outputs: vec![],
             }],
             parallel: false,

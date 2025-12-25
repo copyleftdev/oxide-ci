@@ -234,9 +234,16 @@ pub struct StepDefinition {
     #[serde(default)]
     pub retry: Option<RetryConfig>,
     #[serde(default)]
-    pub continue_on_error: bool,
+    pub continue_on_error: Option<BooleanOrExpression>,
     #[serde(default)]
     pub outputs: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum BooleanOrExpression {
+    Boolean(bool),
+    Expression(String),
 }
 
 fn default_shell() -> String {

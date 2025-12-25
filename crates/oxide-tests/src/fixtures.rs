@@ -162,6 +162,7 @@ impl PipelineFixture {
     /// Create an echo step helper.
     fn echo_step(message: &str) -> StepDefinition {
         StepDefinition {
+            with: Default::default(),
             name: message.to_string(),
             display_name: Some(message.to_string()),
             plugin: None,
@@ -174,7 +175,7 @@ impl PipelineFixture {
             condition: None,
             timeout_minutes: 5,
             retry: None,
-            continue_on_error: false,
+            continue_on_error: None,
             outputs: vec![],
         }
     }
