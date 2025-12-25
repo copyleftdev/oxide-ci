@@ -3,7 +3,7 @@
 .PHONY: help lint validate bundle docs clean setup check fmt test
 
 help: ## Display this help message
-	@(.venv/bin/python scripts/generate_ascii_logo.py 2>/dev/null) || (python3 scripts/generate_ascii_logo.py 2>/dev/null) || echo "Oxide CI"
+	@(which chafa >/dev/null && chafa docs/media/logo.png --size=40x20) || (.venv/bin/python scripts/generate_ascii_logo.py 2>/dev/null) || (python3 scripts/generate_ascii_logo.py 2>/dev/null) || echo "Oxide CI"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
