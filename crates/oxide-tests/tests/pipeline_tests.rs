@@ -165,7 +165,7 @@ async fn test_multiple_runs_for_pipeline() {
     }
 
     // List runs for pipeline
-    let runs = run_repo.list_by_pipeline(pipeline.id, 10, 0).await.unwrap();
+    let runs = run_repo.get_by_pipeline(pipeline.id, 10, 0).await.unwrap();
 
     assert_eq!(runs.len(), 5);
 }

@@ -103,7 +103,7 @@ async fn test_run_crud() {
 
     // List by pipeline
     let runs = run_repo
-        .list_by_pipeline(pipeline.id, 10, 0)
+        .get_by_pipeline(pipeline.id, 10, 0)
         .await
         .expect("Failed to list runs");
     assert_eq!(runs.len(), 1);
