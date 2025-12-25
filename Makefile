@@ -49,6 +49,9 @@ fmt:
 test:
 	cargo test --workspace --lib
 
+test-integration:
+	cargo test -p oxide-tests --features integration
+
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
 
