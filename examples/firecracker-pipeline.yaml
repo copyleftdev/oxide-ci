@@ -22,24 +22,28 @@ stages:
         disk_size_gb: 20
         network: true
         boot_timeout_seconds: 30
-    
+
     agent:
       labels:
         - firecracker
         - large
-    
+
     steps:
       - name: checkout
-        plugin: "oxide/checkout@v1"
-      
+        plugin: "git-checkout"
+        with:
+          repository: "https://github.com/copyleftdev/oxide-ci.git"
+          path: "./source"
+
       - name: build
         run: |
           apt-get update && apt-get install -y build-essential
           make release
         timeout_minutes: 30
-      
+
       - name: sign
-        plugin: "oxide/cosign@v1"
+        # plugin: "oxide/cosign@v1"
+        run: echo "Mock Cosign"
         secrets:
           - name: COSIGN_PRIVATE_KEY
             source:
@@ -48,9 +52,10 @@ stages:
             key: private_key
         variables:
           artifact: "./dist/oxide"
-      
+
       - name: upload
-        plugin: "oxide/upload-artifact@v1"
+        # plugin: "oxide/upload-artifact@v1"
+        run: echo "Mock Upload"
         variables:
           name: "oxide-signed"
           path: "./dist/oxide*"
@@ -65,16 +70,18 @@ stages:
         image: "anchore/syft:latest"
     steps:
       - name: download
-        plugin: "oxide/download-artifact@v1"
+        # plugin: "oxide/download-artifact@v1"
+        run: echo "Mock Download"
         variables:
           name: "oxide-signed"
           path: "./dist"
-      
+
       - name: generate-sbom
         run: syft ./dist/oxide -o spdx-json > sbom.json
-      
+
       - name: upload-sbom
-        plugin: "oxide/upload-artifact@v1"
+        # plugin: "oxide/upload-artifact@v1"
+        run: echo "Mock Upload SBOM"
         variables:
           name: "sbom"
           path: "sbom.json"

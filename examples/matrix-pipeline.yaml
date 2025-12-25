@@ -32,25 +32,28 @@ stages:
             rust: "1.74"
       fail_fast: true
       max_parallel: 6
-    
+
     environment:
       type: container
       container:
         image: "rust:${{ matrix.rust }}"
-    
+
     agent:
       labels:
         - "${{ matrix.os }}"
-    
+
     steps:
       - name: checkout
-        plugin: "oxide/checkout@v1"
-      
+        plugin: "git-checkout"
+        with:
+          repository: "https://github.com/copyleftdev/oxide-ci.git"
+          path: "./source"
+
       - name: setup-rust
         run: |
           rustup default ${{ matrix.rust }}
           rustup component add clippy
-      
+
       - name: test
         run: cargo test --all-features
         continue_on_error: "${{ matrix.experimental || false }}"
@@ -61,7 +64,7 @@ stages:
       - test
     condition:
       if: "branch == 'main' && event != 'pull_request'"
-    
+
     matrix:
       dimensions:
         target:
@@ -72,19 +75,23 @@ stages:
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
       max_parallel: 3
-    
+
     steps:
       - name: checkout
-        plugin: "oxide/checkout@v1"
-      
+        plugin: "git-checkout"
+        with:
+          repository: "https://github.com/copyleftdev/oxide-ci.git"
+          path: "./source"
+
       - name: setup-cross
         run: cargo install cross
-      
+
       - name: build
         run: cross build --release --target ${{ matrix.target }}
-      
+
       - name: upload
-        plugin: "oxide/upload-artifact@v1"
+        # plugin: "oxide/upload-artifact@v1"
+        run: echo "Mock Upload"
         variables:
           name: "oxide-${{ matrix.target }}"
           path: "target/${{ matrix.target }}/release/oxide*"
@@ -95,21 +102,23 @@ stages:
       - build-release
     condition:
       if: "startsWith(ref, 'refs/tags/v')"
-    
+
     steps:
       - name: download-all
-        plugin: "oxide/download-artifact@v1"
+        # plugin: "oxide/download-artifact@v1"
+        run: echo "Mock Download"
         variables:
           pattern: "oxide-*"
           path: "./artifacts"
-      
+
       - name: create-checksums
         run: |
           cd artifacts
           sha256sum * > SHA256SUMS
-      
+
       - name: github-release
-        plugin: "oxide/github-release@v1"
+        # plugin: "oxide/github-release@v1"
+        run: echo "Mock GitHub Release"
         secrets:
           - name: GITHUB_TOKEN
             source:

@@ -22,18 +22,21 @@ stages:
         substituters:
           - "https://cache.nixos.org"
           - "https://nix.oxideci.io"
-    
+
     agent:
       labels:
         - nix
-    
+
     steps:
       - name: checkout
-        plugin: "oxide/checkout@v1"
-      
+        plugin: "git-checkout"
+        with:
+          repository: "https://github.com/copyleftdev/oxide-ci.git"
+          path: "./source"
+
       - name: flake-check
         run: nix flake check
-      
+
       - name: format-check
         run: |
           nix fmt -- --check .
@@ -50,18 +53,22 @@ stages:
         pure: true
     steps:
       - name: checkout
-        plugin: "oxide/checkout@v1"
-      
+        plugin: "git-checkout"
+        with:
+          repository: "https://github.com/copyleftdev/oxide-ci.git"
+          path: "./source"
+
       - name: build
         run: |
           nix build .#default
           cp -L result/bin/oxide ./oxide
-      
+
       - name: test
         run: nix build .#checks.x86_64-linux.default
-      
+
       - name: upload
-        plugin: "oxide/upload-artifact@v1"
+        # plugin: "oxide/upload-artifact@v1"
+        run: echo "Mock Upload"
         variables:
           name: "oxide-nix"
           path: "./oxide"
@@ -78,13 +85,16 @@ stages:
           - skopeo
     steps:
       - name: checkout
-        plugin: "oxide/checkout@v1"
-      
+        plugin: "git-checkout"
+        with:
+          repository: "https://github.com/copyleftdev/oxide-ci.git"
+          path: "./source"
+
       - name: build-image
         run: |
           nix build .#dockerImage
           docker load < result
-      
+
       - name: push
         run: |
           skopeo copy \
@@ -111,8 +121,11 @@ stages:
           - cachix
     steps:
       - name: checkout
-        plugin: "oxide/checkout@v1"
-      
+        plugin: "git-checkout"
+        with:
+          repository: "https://github.com/copyleftdev/oxide-ci.git"
+          path: "./source"
+
       - name: push-cache
         run: |
           nix build .#default --json | \
