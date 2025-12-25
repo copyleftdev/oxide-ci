@@ -6,6 +6,10 @@
 
 **A Modern, Extensible, High-Performance CI/CD Engine written in Rust.**
 
+> [!WARNING]
+> **Status: Early Development (v0.1.0)**
+> This project is currently in early alpha. Features and APIs are subject to change. Use with caution in production environments.
+
 [![Build Status](https://img.shields.io/badge/build-passing-fd4403?style=flat-square)](https://github.com/copyleftdev/oxide-ci/actions)
 [![License](https://img.shields.io/badge/license-MIT-1e2e3a?style=flat-square)](LICENSE)
 [![Rust Version](https://img.shields.io/badge/rust-1.70%2B-fd4403?style=flat-square)](https://www.rust-lang.org)
