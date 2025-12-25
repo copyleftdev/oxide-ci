@@ -1,71 +1,27 @@
-# Plugin Development
+# Plugin System
 
-Plugins are WebAssembly modules using the [Extism](https://extism.org/) framework.
+Oxide CI supports extensions via a modular plugin system.
 
-## Quick Start
+## Types of Plugins
 
-```rust
-use extism_pdk::*;
-use serde::{Deserialize, Serialize};
+### 1. Native Built-in Plugins
+These are compiled directly into the binary for maximum performance and stability.
+- **`git-checkout`**: Clones repositories.
+- **`cache`**: Manages dependency caching (save/restore).
+- **`docker-build`**: Builds Docker images.
+- **`rust-toolchain`**: Installs/configures Rust toolchains.
 
-#[derive(Deserialize)]
-struct Input {
-    repository: String,
-    ref_name: String,
-}
+### 2. WASM Plugins (Beta)
+Oxide CI can load WebAssembly modules to extend functionality dynamically. This allows for safe, sandboxed execution of third-party plugins.
 
-#[derive(Serialize)]
-struct Output {
-    success: bool,
-    message: String,
-}
+## Using a Plugin
 
-#[plugin_fn]
-pub fn run(input: Json<Input>) -> FnResult<Json<Output>> {
-    // Plugin logic here
-    Ok(Json(Output {
-        success: true,
-        message: format!("Checked out {}", input.ref_name),
-    }))
-}
-```
-
-## Build
-
-```bash
-cargo build --target wasm32-unknown-unknown --release
-```
-
-## Plugin Manifest
-
-`plugin.yaml`:
-```yaml
-name: my-plugin
-version: 1.0.0
-description: My custom plugin
-inputs:
-  - name: repository
-    required: true
-  - name: ref_name
-    default: main
-outputs:
-  - name: commit_sha
-```
-
-## Using Plugins
+In `pipeline.yaml`:
 
 ```yaml
 steps:
-  - name: checkout
-    uses: my-plugin@v1
+  - name: Checkout
+    plugin: git-checkout
     with:
-      repository: ${{ repository }}
-      ref_name: ${{ branch }}
+      repository: https://github.com/user/repo.git
 ```
-
-## Built-in Plugins
-
-- `git-checkout@v1` - Git clone and checkout
-- `cache@v1` - Cache save/restore
-- `artifact@v1` - Upload/download artifacts
-- `aws-auth@v1` - AWS OIDC authentication

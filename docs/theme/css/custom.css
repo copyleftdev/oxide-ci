@@ -1,0 +1,43 @@
+/* Oxide Orange Theme */
+:root {
+    --oxide-orange: #fd4403;
+    --oxide-slate: #1e2e3a;
+    --sidebar-bg: #f5f5f5;
+    --sidebar-fg: #333;
+    /* Active chapter text in sidebar */
+    --sidebar-active: var(--oxide-orange);
+    /* Link colors */
+    --links: var(--oxide-orange);
+    /* Quote borders */
+    --quote-border: var(--oxide-orange);
+    /* Table headers */
+    --table-header-bg: var(--oxide-slate);
+    --table-header-fg: #fff;
+}
+
+/* Dark Mode Overrides */
+.ayu, .coal, .navy {
+    --sidebar-bg: #111;
+    --sidebar-fg: #ddd;
+    --table-header-bg: #333;
+}
+
+/* Links */
+a { color: var(--oxide-orange); }
+a:hover { text-decoration: underline; }
+
+/* Sidebar Active Link */
+.sidebar .active > a {
+    color: var(--oxide-orange) !important;
+    border-right: 3px solid var(--oxide-orange);
+}
+
+/* Buttons */
+.play-button { 
+    background-color: var(--oxide-orange) !important; 
+}
+
+/* Code blocks */
+pre {
+    border-left: 2px solid var(--oxide-orange);
+}

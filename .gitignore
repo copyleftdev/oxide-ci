@@ -13,3 +13,7 @@ Cargo.lock
 
 # OS
 .DS_Store
+
+# Documentation artifacts
+docs/book/
+wiki-export/

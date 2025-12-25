@@ -1,49 +1,28 @@
 # Architecture
 
-## Overview
-
-Oxide CI uses a **hexagonal (ports & adapters) architecture** with event-driven communication.
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    oxide-api                         │
-│              (HTTP/WebSocket Server)                 │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────┐
-│                   oxide-nats                         │
-│                  (Event Bus)                         │
-└───┬─────────┬─────────┬─────────┬─────────┬────────┘
-    │         │         │         │         │
-┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐
-│ sched │ │ agent │ │runner │ │notify │ │billing│
-└───────┘ └───────┘ └───────┘ └───────┘ └───────┘
-```
+Oxide CI is composed of several modular crates.
 
 ## Core Components
 
-| Crate | Purpose |
-|-------|---------|
-| `oxide-core` | Domain types, traits, zero external deps |
-| `oxide-api` | HTTP/WebSocket API server |
-| `oxide-scheduler` | Pipeline scheduling and orchestration |
-| `oxide-agent` | Build agent lifecycle |
-| `oxide-runner` | Step execution (container, nix, firecracker) |
-| `oxide-nats` | NATS JetStream event bus |
-| `oxide-db` | PostgreSQL persistence |
+### `oxide-core`
+Defines the shared types, events, and logic used across the system. This includes the `PipelineDefinition` struct, event bus traits, and basic utilities.
 
-## Event Flow
+### `oxide-agent`
+The worker component responsible for executing jobs. It listens for commands from the scheduler and runs steps.
 
-1. **Trigger** → API receives webhook/schedule
-2. **Schedule** → Scheduler queues run, publishes `run.queued`
-3. **Dispatch** → Agent claims run, publishes `run.started`
-4. **Execute** → Runner executes steps, streams logs
-5. **Complete** → Agent publishes `run.completed`
-6. **Notify** → Notification service sends alerts
+### `oxide-scheduler`
+Orchestrates pipeline execution. It resolves the DAG (Directed Acyclic Graph) of stages and dispatches jobs to available agents.
 
-## AsyncAPI Spec
+### `oxide-runner`
+The execution engine that runs individual steps. It handles:
+- Docker container lifecycle (`testcontainers`, `docker`).
+- Process isolation.
+- Plugin execution.
 
-All events follow schemas in `spec/`:
-- `spec/asyncapi.yaml` - Main spec
-- `spec/schemas/*.yaml` - Type definitions
-- `spec/channels/*.yaml` - Event channels
+## Plugins
+See [Plugin System](plugins.md).
+
+## Storage
+- **PostgreSQL**: Stores pipeline definitions, run history, and logs.
+- **MinIO/S3**: Stores artifacts and cache blobs.
+- **NATS**: Event bus for real-time communication between components.

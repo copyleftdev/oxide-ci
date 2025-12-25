@@ -1,79 +1,53 @@
+<div align="center">
+
+<img src="docs/media/logo.png" alt="Oxide CI Logo" width="200"/>
+
 # Oxide CI
 
-> API-first CI/CD engine written in Rust.
+**A Modern, Extensible, High-Performance CI/CD Engine written in Rust.**
 
-⚠️ **PRIVATE PRODUCT** - Do not commit to public repositories.
+[![Build Status](https://img.shields.io/badge/build-passing-fd4403?style=flat-square)](https://github.com/copyleftdev/oxide-ci/actions)
+[![License](https://img.shields.io/badge/license-MIT-1e2e3a?style=flat-square)](LICENSE)
+[![Rust Version](https://img.shields.io/badge/rust-1.70%2B-fd4403?style=flat-square)](https://www.rust-lang.org)
+[![Documentation](https://img.shields.io/badge/docs-wiki-1e2e3a?style=flat-square)](https://github.com/copyleftdev/oxide-ci/wiki)
 
-## Overview
+---
 
-Oxide CI is an event-driven CI/CD system with:
-- **Rust core** — Performance, safety, zero-cost abstractions
-- **WASM plugins** — Sandboxed, polyglot plugin system
-- **Keygen licensing** — License management and entitlements
-- **Stripe billing** — Subscriptions and metered usage
+</div>
 
-## Structure
+Oxide CI is designed to solve the complexity and slowness of modern CI systems. It provides a local-first, dogfooding-capable pipeline engine with a powerful plugin system.
 
-```
-oxide-ci/
-├── spec/                    # AsyncAPI specification
-│   ├── asyncapi.yaml        # Main entry point
-│   ├── channels/            # Event channels
-│   ├── messages/            # Message definitions
-│   ├── schemas/             # Data schemas
-│   │   ├── common.yaml      # Shared types (UUID, Timestamp, Status)
-│   │   ├── pipeline.yaml    # Pipeline definition schema (user-authored)
-│   │   ├── environment.yaml # Container, Firecracker, Nix environments
-│   │   ├── run.yaml         # Run lifecycle payloads
-│   │   ├── stage.yaml       # Stage lifecycle payloads
-│   │   ├── step.yaml        # Step lifecycle payloads
-│   │   ├── agent.yaml       # Agent pool management
-│   │   ├── cache.yaml       # Build cache events
-│   │   ├── secrets.yaml     # Secret management (Vault, AWS, GCP, Azure)
-│   │   ├── auth.yaml        # OIDC token exchange
-│   │   ├── matrix.yaml      # Matrix build expansion
-│   │   ├── approval.yaml    # Approval gates & environment protection
-│   │   ├── notification.yaml# Slack, Teams, PagerDuty, webhooks
-│   │   ├── trace.yaml       # OpenTelemetry distributed tracing
-│   │   ├── artifact.yaml    # Build artifacts
-│   │   ├── webhook.yaml     # VCS webhook payloads
-│   │   ├── licensing.yaml   # Keygen license events
-│   │   └── billing.yaml     # Stripe billing events
-│   └── operations/          # Operation definitions
-├── examples/                # Example pipeline configurations
-├── Makefile                 # Development commands
-└── package.json             # Node dependencies (for AsyncAPI CLI)
-```
+## 🚀 Key Features
 
-## Development
+| Feature | Description |
+|---------|-------------|
+| **⚡ Blazing Fast** | Built with Rust and Tokio for high-concurrency execution. |
+| **🔌 Plug & Play** | Extend functionality with **Native** and **WASM** plugins. |
+| **🐶 Dogfooding** | Capable of building, testing, and verifying itself locally. |
+| **🛠️ Compatibility** | Drop-in replacements for common GitHub Actions. |
+
+## 📦 quick start
 
 ```bash
-# Install dependencies
-make install
+# Install CLI
+cargo install --path crates/oxide-cli
 
-# Validate spec
-make lint
-
-# Bundle for distribution
-make bundle
-
-# Generate docs
-make docs
+# Run a pipeline
+oxide run .oxide-ci/pipeline.yaml
 ```
 
-## Monetization
+## 🎨 Architecture
 
-### Keygen (Licensing)
-- License validation on API access
-- Machine fingerprinting for seat limits
-- Entitlement-based feature flags
-- Grace periods and suspension
+Oxide CI functions via a modular architecture:
+- **Core**: Shared logic and event bus.
+- **Agent**: Distributed execution workers.
+- **Scheduler**: DAG resolution and job dispatch.
 
-### Stripe (Billing)
-- Subscription plans (Starter, Pro, Enterprise)
-- Metered billing for build minutes
-- Payment failure → license suspension flow
+## 🤝 Contributing
 
-## License
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
 
-Proprietary
+---
+<div align="center">
+<sub>Built with 🧡 by <a href="https://github.com/copyleftdev">Copyleft Dev</a></sub>
+</div>

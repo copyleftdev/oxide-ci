@@ -1,10 +1,12 @@
 [book]
-title = "Oxide CI Documentation"
-authors = ["Oxide CI Team"]
+authors = ["Oxide CI Maintainers"]
 language = "en"
-
-[build]
-build-dir = "book"
+src = "src"
+title = "Oxide CI Documentation"
 
 [output.html]
 git-repository-url = "https://github.com/copyleftdev/oxide-ci"
+edit-url-template = "https://github.com/copyleftdev/oxide-ci/edit/main/docs/{path}"
+site-url = "/oxide-ci/"
+additional-css = ["theme/css/custom.css"]
+
