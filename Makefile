@@ -1,6 +1,20 @@
 # Oxide CI - AsyncAPI Development Commands
 
-.PHONY: lint validate bundle docs clean setup check fmt test
+.PHONY: help lint validate bundle docs clean setup check fmt test
+
+help: ## Display this help message
+	@(.venv/bin/python scripts/generate_ascii_logo.py 2>/dev/null) || (python3 scripts/generate_ascii_logo.py 2>/dev/null) || echo "Oxide CI"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+# Development Setup
+dev-setup: ## Setup Python venv and install dependencies
+	python3 -m venv .venv
+	.venv/bin/pip install -r requirements.txt
+	@echo "✅ Development environment setup complete."
+
 
 # Validate the AsyncAPI spec
 lint: validate
