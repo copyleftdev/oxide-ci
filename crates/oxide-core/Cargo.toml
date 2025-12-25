@@ -12,6 +12,7 @@ chrono = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
 schemars = { workspace = true }
+regex = "1"
 futures = "0.3"
 
 [dev-dependencies]

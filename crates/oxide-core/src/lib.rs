@@ -14,6 +14,7 @@ pub mod pipeline;
 pub mod ports;
 pub mod run;
 pub mod secrets;
+pub mod interpolation;
 
 pub use error::{Error, Result};
 pub use ids::*;

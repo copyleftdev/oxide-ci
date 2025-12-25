@@ -1,5 +1,3 @@
-//! Job execution logic.
-
 use oxide_core::Result;
 use oxide_core::events::{Event, StageCompletedPayload, StageStartedPayload};
 use oxide_core::ids::{AgentId, PipelineId, RunId};
@@ -10,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
 use tracing::{error, info, warn};
+use oxide_core::interpolation::InterpolationContext;
 
 /// Executes jobs assigned to this agent.
 pub struct JobExecutor {
@@ -67,6 +66,18 @@ impl JobExecutor {
         // Set up workspace
         let workspace = self.setup_workspace(&job).await?;
 
+        // Initialize interpolation context
+        let mut ctx = InterpolationContext::new();
+        ctx.variables = job.variables.clone();
+        
+        // Also populate matrix values if they can be inferred (TODO: Job should carry explicit matrix context)
+        // For now, check if variables start with "matrix."
+        for (k, v) in &job.variables {
+             if let Some(key) = k.strip_prefix("matrix.") {
+                 ctx.matrix.insert(key.to_string(), v.clone());
+             }
+        }
+
         // Publish stage started event
         self.publish_stage_started(&job, step_count).await?;
 
@@ -85,8 +96,11 @@ impl JobExecutor {
             );
 
             // Execute step (simplified - would delegate to oxide-runner)
-            if let Some(ref cmd) = step.run {
-                match self.run_command(cmd, &workspace).await {
+            if let Some(cmd) = &step.run {
+                // Interpolate command
+                let interpolated_cmd = ctx.interpolate(cmd);
+                
+                match self.run_command(&interpolated_cmd, &workspace).await {
                     Ok(_) => {
                         info!(step = %step.name, "Step completed successfully");
                         steps_passed += 1;
@@ -94,12 +108,20 @@ impl JobExecutor {
                     Err(e) => {
                         error!(step = %step.name, error = %e, "Step failed");
                         steps_failed += 1;
+                        
                         use oxide_core::pipeline::BooleanOrExpression;
                         let continue_on_error = match &step.continue_on_error {
                             Some(BooleanOrExpression::Boolean(b)) => *b,
                             Some(BooleanOrExpression::Expression(s)) => {
-                                // Simplified interpolation for agent (TODO: full context support)
-                                s == "true"
+                                // Full context interpolation
+                                let val_str = ctx.interpolate(s); // if plain expression string
+                                // Ideally specific evaluate_condition if boolean expression, but schema uses BooleanOrExpression string
+                                // BooleanOrExpression::Expression is usually "${{ ... }}" or pure logic?
+                                // Our evaluate_condition expects ConditionExpression.
+                                // StepDefinition uses BooleanOrExpression.
+                                // BooleanOrExpression is usually String.
+                                // We can use interpolate and check "true".
+                                val_str == "true"
                             }
                             None => false,
                         };
