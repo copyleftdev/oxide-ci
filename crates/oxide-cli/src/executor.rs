@@ -8,21 +8,21 @@
 
 use console::style;
 use futures::future::join_all;
+use oxide_cache::{archiver, types::CompressionType};
 use oxide_core::pipeline::{
     ConditionExpression, PipelineDefinition, StageDefinition, StepDefinition,
 };
-use oxide_cache::{archiver, types::CompressionType};
-use oxide_runner::{ContainerRunner, OutputLine, RunnerConfig, StepRunner, StepContext};
+use oxide_runner::{ContainerRunner, OutputLine, RunnerConfig, StepContext, StepRunner};
 // use regex::Regex; // Removed as it's now internal to oxide-core
+use oxide_core::interpolation::InterpolationContext;
+use oxide_plugins::{get_builtin_plugin, manifest::PluginCallInput};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::task::JoinSet;
-use tokio::time::{sleep, timeout, Duration};
-use oxide_plugins::{get_builtin_plugin, manifest::PluginCallInput};
-use oxide_core::interpolation::InterpolationContext;
+use tokio::time::{Duration, sleep, timeout};
 
 use crate::dag::DagBuilder;
 
@@ -271,10 +271,8 @@ pub async fn execute_pipeline(
 
     let duration_ms = start.elapsed().as_millis() as u64;
 
-    if all_success {
-        if let Err(e) = collect_artifacts(definition, &config.workspace).await {
-             println!("{} Failed to collect artifacts: {}", style("⚠").yellow(), e);
-        }
+    if all_success && let Err(e) = collect_artifacts(definition, &config.workspace).await {
+        println!("{} Failed to collect artifacts: {}", style("⚠").yellow(), e);
     }
 
     // Print summary
@@ -377,7 +375,7 @@ async fn execute_stage(
                         // Let's assume proper checking.
                         // Check the specific step definition from stage.steps?
                         let step_def = stage.steps.iter().find(|s| s.name == name).unwrap();
-                        
+
                         use oxide_core::pipeline::BooleanOrExpression;
                         let continue_on_error = match &step_def.continue_on_error {
                             Some(BooleanOrExpression::Boolean(b)) => *b,
@@ -390,7 +388,7 @@ async fn execute_stage(
                                 // We can assume for now that simple interpolation works.
                                 // We need access to a context. We can use `ctx` variables?
                                 // A simplified check:
-                                s == "true" 
+                                s == "true"
                             }
                             None => false,
                         };
@@ -475,11 +473,24 @@ async fn collect_artifacts(
         tokio::fs::create_dir_all(&artifacts_dir).await?;
 
         let name = config.name.as_deref().unwrap_or("artifact");
-        let ext = if config.compression == "none" { "tar" } else { "tar.zst" };
-        let filename = format!("{}-{}.{}", name, chrono::Utc::now().format("%Y%m%d-%H%M%S"), ext);
+        let ext = if config.compression == "none" {
+            "tar"
+        } else {
+            "tar.zst"
+        };
+        let filename = format!(
+            "{}-{}.{}",
+            name,
+            chrono::Utc::now().format("%Y%m%d-%H%M%S"),
+            ext
+        );
         let output_path = artifacts_dir.join(&filename);
 
-        println!("  Packing {} paths to {}", paths.len(), output_path.display());
+        println!(
+            "  Packing {} paths to {}",
+            paths.len(),
+            output_path.display()
+        );
 
         let compression = match config.compression.as_str() {
             "zstd" => CompressionType::Zstd,
@@ -491,11 +502,14 @@ async fn collect_artifacts(
         let output_path_clone = output_path.clone();
 
         tokio::task::spawn_blocking(move || {
-            let file = std::fs::File::create(&output_path_clone)
-                .map_err(|e| oxide_core::Error::Internal(format!("Failed to create artifact file: {}", e)))?;
+            let file = std::fs::File::create(&output_path_clone).map_err(|e| {
+                oxide_core::Error::Internal(format!("Failed to create artifact file: {}", e))
+            })?;
             let writer = std::io::BufWriter::new(file);
             archiver::create_archive(writer, &paths, &workspace_clone, compression)
-        }).await.map_err(|e| oxide_core::Error::Internal(e.to_string()))??;
+        })
+        .await
+        .map_err(|e| oxide_core::Error::Internal(e.to_string()))??;
 
         let size = tokio::fs::metadata(&output_path).await?.len();
         println!("  {} Artifact saved ({} bytes)", style("✓").green(), size);
@@ -511,9 +525,18 @@ async fn execute_step(
     step_num: usize,
     total_steps: usize,
 ) -> Result<StepResult, Box<dyn std::error::Error + Send + Sync>> {
-    let max_attempts = step.retry.as_ref().map(|r| r.max_attempts).unwrap_or(1).max(1);
+    let max_attempts = step
+        .retry
+        .as_ref()
+        .map(|r| r.max_attempts)
+        .unwrap_or(1)
+        .max(1);
     let delay_seconds = step.retry.as_ref().map(|r| r.delay_seconds).unwrap_or(10) as u64;
-    let exponential_backoff = step.retry.as_ref().map(|r| r.exponential_backoff).unwrap_or(true);
+    let exponential_backoff = step
+        .retry
+        .as_ref()
+        .map(|r| r.exponential_backoff)
+        .unwrap_or(true);
     let retry_on = step.retry.as_ref().map(|r| &r.retry_on);
 
     let mut last_result = StepResult {
@@ -547,12 +570,15 @@ async fn execute_step(
                     let should_retry = if let Some(conditions) = retry_on {
                         if conditions.is_empty() {
                             true // Default to retry on any failure if struct is present but list empty?
-                                 // Schema says defaults. If explicit empty list, maybe user meant no retry?
-                                 // Using "any failure" is safer if they enabled retry.
+                        // Schema says defaults. If explicit empty list, maybe user meant no retry?
+                        // Using "any failure" is safer if they enabled retry.
                         } else {
                             conditions.iter().any(|c| {
                                 c == "failure"
-                                    || (c == "timeout" && last_result.exit_code == -1 && last_result.duration_ms >= (step.timeout_minutes as u64 * 60 * 1000))
+                                    || (c == "timeout"
+                                        && last_result.exit_code == -1
+                                        && last_result.duration_ms
+                                            >= (step.timeout_minutes as u64 * 60 * 1000))
                                     || c == &last_result.exit_code.to_string()
                             })
                         }
@@ -624,18 +650,18 @@ async fn execute_step_attempt(
 
         if let Some(plugin) = get_builtin_plugin(plugin_name) {
             let start_plugin = std::time::Instant::now();
-            
+
             // Prepare inputs
             let mut params = HashMap::new();
             for (k, v) in &step.with {
-                 // Interpolate values
-                 let val_str = match v {
-                     serde_json::Value::String(s) => serde_json::Value::String(ctx.interpolate(&s)),
-                     _ => v.clone(),
-                 };
-                 params.insert(k.clone(), val_str);
+                // Interpolate values
+                let val_str = match v {
+                    serde_json::Value::String(s) => serde_json::Value::String(ctx.interpolate(s)),
+                    _ => v.clone(),
+                };
+                params.insert(k.clone(), val_str);
             }
-            
+
             let mut env = HashMap::new();
             for (k, v) in &ctx.ctx.variables {
                 env.insert(k.clone(), v.clone());
@@ -674,7 +700,7 @@ async fn execute_step_attempt(
                         for (k, v) in output.outputs {
                             ctx.set_output(&step.name, &k, v);
                         }
-                        
+
                         return Ok(StepResult {
                             success: true,
                             exit_code: 0,
@@ -696,7 +722,7 @@ async fn execute_step_attempt(
                 }
                 Err(e) => {
                     println!("      {} Plugin error: {}", style("✗").red(), e);
-                     return Ok(StepResult {
+                    return Ok(StepResult {
                         success: false,
                         exit_code: 1,
                         duration_ms,
@@ -709,7 +735,7 @@ async fn execute_step_attempt(
                 style("⚠").yellow(),
                 plugin_name
             );
-             println!(
+            println!(
                 "      (Only built-in plugins git-checkout, cache, docker-build are currently supported)"
             );
             return Ok(StepResult {

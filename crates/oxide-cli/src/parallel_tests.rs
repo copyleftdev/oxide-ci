@@ -4,7 +4,6 @@ mod tests {
     use oxide_core::pipeline::{PipelineDefinition, StageDefinition, StepDefinition};
     use std::collections::HashMap;
 
-
     fn make_sleep_step(name: &str, seconds: u32) -> StepDefinition {
         StepDefinition {
             with: Default::default(),

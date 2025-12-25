@@ -1,6 +1,7 @@
 use oxide_core::Result;
 use oxide_core::events::{Event, StageCompletedPayload, StageStartedPayload};
 use oxide_core::ids::{AgentId, PipelineId, RunId};
+use oxide_core::interpolation::InterpolationContext;
 use oxide_core::pipeline::StageDefinition;
 use oxide_core::ports::EventBus;
 use oxide_core::run::StageStatus;
@@ -8,7 +9,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
 use tracing::{error, info, warn};
-use oxide_core::interpolation::InterpolationContext;
 
 /// Executes jobs assigned to this agent.
 pub struct JobExecutor {
@@ -69,13 +69,13 @@ impl JobExecutor {
         // Initialize interpolation context
         let mut ctx = InterpolationContext::new();
         ctx.variables = job.variables.clone();
-        
+
         // Also populate matrix values if they can be inferred (TODO: Job should carry explicit matrix context)
         // For now, check if variables start with "matrix."
         for (k, v) in &job.variables {
-             if let Some(key) = k.strip_prefix("matrix.") {
-                 ctx.matrix.insert(key.to_string(), v.clone());
-             }
+            if let Some(key) = k.strip_prefix("matrix.") {
+                ctx.matrix.insert(key.to_string(), v.clone());
+            }
         }
 
         // Publish stage started event
@@ -99,7 +99,7 @@ impl JobExecutor {
             if let Some(cmd) = &step.run {
                 // Interpolate command
                 let interpolated_cmd = ctx.interpolate(cmd);
-                
+
                 match self.run_command(&interpolated_cmd, &workspace).await {
                     Ok(_) => {
                         info!(step = %step.name, "Step completed successfully");
@@ -108,7 +108,7 @@ impl JobExecutor {
                     Err(e) => {
                         error!(step = %step.name, error = %e, "Step failed");
                         steps_failed += 1;
-                        
+
                         use oxide_core::pipeline::BooleanOrExpression;
                         let continue_on_error = match &step.continue_on_error {
                             Some(BooleanOrExpression::Boolean(b)) => *b,

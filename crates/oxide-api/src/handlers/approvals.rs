@@ -35,7 +35,10 @@ pub struct ApprovalResponse {
 pub async fn list_approvals(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<ApprovalGate>>, StatusCode> {
-    let gates = state.approvals.list(None).await
+    let gates = state
+        .approvals
+        .list(None)
+        .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(gates))
 }
@@ -69,10 +72,11 @@ pub async fn respond_to_approval(
     };
 
     if gate.status != ApprovalStatus::Pending {
-         return Err(StatusCode::CONFLICT); // Already decided
+        return Err(StatusCode::CONFLICT); // Already decided
     }
 
-    if !gate.can_approve(&request.user_id, None) { // TODO: pass triggered_by if known from context/auth
+    if !gate.can_approve(&request.user_id, None) {
+        // TODO: pass triggered_by if known from context/auth
         return Err(StatusCode::FORBIDDEN);
     }
 
@@ -90,7 +94,11 @@ pub async fn respond_to_approval(
         ApproverAction::Rejected => gate.reject(approver),
     }
 
-    state.approvals.update(&gate).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    state
+        .approvals
+        .update(&gate)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Publish event
     // TODO: Publish ApprovalGranted/Rejected event via state.event_bus
@@ -101,11 +109,14 @@ pub async fn respond_to_approval(
         current_approvals: gate.current_approvals,
         required_approvals: gate.required_approvers,
         fully_approved: gate.is_fully_approved(),
-        message: format!("Approval {}", match gate.status {
-            ApprovalStatus::Approved => "granted",
-            ApprovalStatus::Rejected => "rejected",
-            _ => "recorded",
-        }),
+        message: format!(
+            "Approval {}",
+            match gate.status {
+                ApprovalStatus::Approved => "granted",
+                ApprovalStatus::Rejected => "rejected",
+                _ => "recorded",
+            }
+        ),
     }))
 }
 
@@ -123,8 +134,12 @@ pub async fn bypass_approval(
     };
 
     gate.status = ApprovalStatus::Bypassed;
-    state.approvals.update(&gate).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
+    state
+        .approvals
+        .update(&gate)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     // Publish event
 
     Ok(Json(ApprovalResponse {

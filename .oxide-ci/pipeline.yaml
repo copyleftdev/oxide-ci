@@ -1,0 +1,33 @@
+name: Oxide CI Dogfood
+version: "1"
+stages:
+  - name: debug-context
+    steps:
+      - name: List Files
+        run: ls -la
+
+  - name: build
+    steps:
+      - name: Build Workspace
+        run: cargo build --workspace --all-targets
+
+  - name: test
+    parallel: true
+    steps:
+      - name: Unit Tests
+        run: cargo test --workspace --lib
+
+      # Integration tests require Docker/Services usually.
+      # If running locally on host, it might work if host has Docker.
+      # We'll enable it and see.
+      - name: Integration Tests
+        run: cargo test -p oxide-tests --features integration
+
+  - name: quality
+    parallel: true
+    steps:
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Format Check
+        run: cargo fmt --all -- --check

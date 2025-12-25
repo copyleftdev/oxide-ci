@@ -69,7 +69,6 @@ pub async fn run_pipeline(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use crate::executor::{self, ExecutorConfig};
 
-
     // Find pipeline file
     let pipeline_path = executor::find_pipeline_file(pipeline.as_deref());
     let Some(path) = pipeline_path else {
@@ -94,20 +93,26 @@ pub async fn run_pipeline(
 
     // Load secrets from .env if present
     if let Ok(content) = std::fs::read_to_string(".env") {
-         println!("{} Loading secrets from .env", style("•").dim());
-         for line in content.lines() {
-             let line = line.trim();
-             if line.is_empty() || line.starts_with('#') { continue; }
-             if let Some((k, v)) = line.split_once('=') {
-                 exec_config.secrets.insert(k.trim().to_string(), v.trim().to_string());
-             }
-         }
+        println!("{} Loading secrets from .env", style("•").dim());
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if let Some((k, v)) = line.split_once('=') {
+                exec_config
+                    .secrets
+                    .insert(k.trim().to_string(), v.trim().to_string());
+            }
+        }
     }
 
     // Load CLI secrets
     for s in secrets {
         if let Some((k, v)) = s.split_once('=') {
-            exec_config.secrets.insert(k.trim().to_string(), v.trim().to_string());
+            exec_config
+                .secrets
+                .insert(k.trim().to_string(), v.trim().to_string());
         }
     }
 
@@ -130,7 +135,7 @@ pub async fn logs(
     println!("  API URL: {}", config.api_url);
 
     let client = crate::client::ApiClient::new(config);
-    
+
     if follow {
         println!("  Following logs (Ctrl+C to stop)...");
         // TODO: WebSocket streaming requires different client logic or client.stream_logs()
@@ -230,7 +235,7 @@ pub async fn list_secrets(
 
     match client.list_secrets().await {
         Ok(secrets) => {
-             if secrets.is_empty() {
+            if secrets.is_empty() {
                 println!("{} No secrets configured", style("i").blue());
             } else {
                 for name in secrets {
@@ -279,7 +284,7 @@ pub async fn list_cache(
 
     match client.list_cache().await {
         Ok(entries) => {
-             if entries.is_empty() {
+            if entries.is_empty() {
                 println!("{} No cache entries", style("i").blue());
             } else {
                 for key in entries {

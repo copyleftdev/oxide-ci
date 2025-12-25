@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use regex::Regex;
+use std::collections::HashMap;
 
 /// Context for variable interpolation.
 #[derive(Debug, Clone, Default)]
@@ -85,7 +85,9 @@ impl InterpolationContext {
     /// Evaluate a condition expression.
     pub fn evaluate_condition(&self, condition: &crate::pipeline::ConditionExpression) -> bool {
         match condition {
-            crate::pipeline::ConditionExpression::Simple(expr) => self.evaluate_string_expression(expr),
+            crate::pipeline::ConditionExpression::Simple(expr) => {
+                self.evaluate_string_expression(expr)
+            }
             crate::pipeline::ConditionExpression::Structured { if_expr, unless } => {
                 if let Some(expr) = if_expr
                     && !self.evaluate_string_expression(expr)

@@ -66,14 +66,15 @@ impl PluginRegistry {
         // Fetch from registry
         let client = reqwest::Client::new();
         let mut request = client.get(&url);
-        
+
         if let Some(token) = &self.config.auth_token {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send().await.map_err(|e| {
-            oxide_core::Error::Internal(format!("Failed to fetch plugin: {}", e))
-        })?;
+        let response = request
+            .send()
+            .await
+            .map_err(|e| oxide_core::Error::Internal(format!("Failed to fetch plugin: {}", e)))?;
 
         if !response.status().is_success() {
             if response.status() == reqwest::StatusCode::NOT_FOUND {

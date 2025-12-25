@@ -2,26 +2,26 @@
 
 use clap::Parser;
 
+mod client;
 mod commands;
 mod config;
-mod client;
 mod dag;
 mod executor;
 mod handlers;
 mod matrix;
 
 #[cfg(test)]
+mod artifact_tests;
+#[cfg(test)]
+mod cache_tests;
+#[cfg(test)]
+mod examples_tests;
+#[cfg(test)]
 mod executor_tests;
 #[cfg(test)]
 mod parallel_tests;
 #[cfg(test)]
-mod examples_tests;
-#[cfg(test)]
 mod retry_tests;
-#[cfg(test)]
-mod cache_tests;
-#[cfg(test)]
-mod artifact_tests;
 
 use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};
 use config::CliConfig;

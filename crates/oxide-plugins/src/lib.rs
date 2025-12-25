@@ -5,9 +5,10 @@ pub mod manifest;
 pub mod registry;
 
 // New modules
-pub mod git;
 pub mod cache;
 pub mod docker;
+pub mod git;
+pub mod rust_toolchain;
 
 pub use host::{PluginHost, PluginHostConfig};
 pub use manifest::{
@@ -32,6 +33,7 @@ pub fn get_builtin_plugin(name: &str) -> Option<Box<dyn Plugin>> {
         "git-checkout" | "oxide/checkout" => Some(Box::new(git::GitCheckoutPlugin::new())),
         "cache" | "oxide/cache" => Some(Box::new(cache::CachePlugin::new())),
         "docker-build" | "oxide/docker-build" => Some(Box::new(docker::DockerBuildPlugin::new())),
+        "rust-toolchain" | "dtolnay/rust-toolchain" => Some(Box::new(rust_toolchain::RustToolchainPlugin::new())),
         _ => None,
     }
 }

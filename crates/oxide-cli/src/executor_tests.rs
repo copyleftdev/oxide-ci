@@ -8,7 +8,8 @@ mod tests {
     #[test]
     fn test_interpolate_simple_variable() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.ctx.variables
+        ctx.ctx
+            .variables
             .insert("NAME".to_string(), "world".to_string());
 
         assert_eq!(ctx.interpolate("Hello ${{ NAME }}!"), "Hello world!");
@@ -17,7 +18,8 @@ mod tests {
     #[test]
     fn test_interpolate_env_variable() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.ctx.variables
+        ctx.ctx
+            .variables
             .insert("MY_VAR".to_string(), "test_value".to_string());
 
         assert_eq!(
@@ -30,7 +32,9 @@ mod tests {
     fn test_interpolate_matrix_variable() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
         ctx.ctx.matrix.insert("os".to_string(), "linux".to_string());
-        ctx.ctx.matrix.insert("arch".to_string(), "amd64".to_string());
+        ctx.ctx
+            .matrix
+            .insert("arch".to_string(), "amd64".to_string());
 
         assert_eq!(
             ctx.interpolate("Building for ${{ matrix.os }}-${{ matrix.arch }}"),
@@ -67,9 +71,11 @@ mod tests {
     #[test]
     fn test_interpolate_multiple_variables() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.ctx.variables
+        ctx.ctx
+            .variables
             .insert("FIRST".to_string(), "Hello".to_string());
-        ctx.ctx.variables
+        ctx.ctx
+            .variables
             .insert("SECOND".to_string(), "World".to_string());
 
         assert_eq!(
@@ -81,7 +87,9 @@ mod tests {
     #[test]
     fn test_interpolate_with_whitespace_variations() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.ctx.variables.insert("VAR".to_string(), "value".to_string());
+        ctx.ctx
+            .variables
+            .insert("VAR".to_string(), "value".to_string());
 
         // Various whitespace patterns should all work
         assert_eq!(ctx.interpolate("${{VAR}}"), "value");
@@ -104,7 +112,10 @@ mod tests {
 
         ctx.parse_outputs("build", content);
 
-        assert_eq!(ctx.ctx.outputs.get("build.version"), Some(&"1.0.0".to_string()));
+        assert_eq!(
+            ctx.ctx.outputs.get("build.version"),
+            Some(&"1.0.0".to_string())
+        );
         assert_eq!(
             ctx.ctx.outputs.get("build.status"),
             Some(&"success".to_string())
@@ -118,8 +129,14 @@ mod tests {
 
         ctx.parse_outputs("step", content);
 
-        assert_eq!(ctx.ctx.outputs.get("step.key1"), Some(&"value1".to_string()));
-        assert_eq!(ctx.ctx.outputs.get("step.key2"), Some(&"value2".to_string()));
+        assert_eq!(
+            ctx.ctx.outputs.get("step.key1"),
+            Some(&"value1".to_string())
+        );
+        assert_eq!(
+            ctx.ctx.outputs.get("step.key2"),
+            Some(&"value2".to_string())
+        );
     }
 
     #[test]
@@ -129,7 +146,10 @@ mod tests {
 
         ctx.parse_outputs("math", content);
 
-        assert_eq!(ctx.ctx.outputs.get("math.equation"), Some(&"x=y+z".to_string()));
+        assert_eq!(
+            ctx.ctx.outputs.get("math.equation"),
+            Some(&"x=y+z".to_string())
+        );
     }
 
     #[test]
@@ -155,11 +175,14 @@ mod tests {
     #[test]
     fn test_interpolate_complex_script() {
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.ctx.variables
+        ctx.ctx
+            .variables
             .insert("PROJECT".to_string(), "myapp".to_string());
-        ctx.ctx.variables
+        ctx.ctx
+            .variables
             .insert("VERSION".to_string(), "2.0.0".to_string());
-        ctx.ctx.matrix
+        ctx.ctx
+            .matrix
             .insert("target".to_string(), "x86_64-linux".to_string());
         ctx.set_output("build", "binary", "myapp-linux".to_string());
 
@@ -193,7 +216,8 @@ mod tests {
     fn test_evaluate_condition_simple() {
         use oxide_core::pipeline::ConditionExpression;
         let mut ctx = ExecutionContext::new(PathBuf::from("/tmp"));
-        ctx.ctx.variables
+        ctx.ctx
+            .variables
             .insert("BRANCH".to_string(), "main".to_string());
 
         // true

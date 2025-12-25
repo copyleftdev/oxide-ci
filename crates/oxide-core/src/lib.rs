@@ -10,11 +10,11 @@ pub mod cache;
 pub mod error;
 pub mod events;
 pub mod ids;
+pub mod interpolation;
 pub mod pipeline;
 pub mod ports;
 pub mod run;
 pub mod secrets;
-pub mod interpolation;
 
 pub use error::{Error, Result};
 pub use ids::*;

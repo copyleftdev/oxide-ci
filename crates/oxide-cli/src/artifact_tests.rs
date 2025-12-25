@@ -1,7 +1,5 @@
-
-use crate::executor::{execute_pipeline, ExecutorConfig};
+use crate::executor::{ExecutorConfig, execute_pipeline};
 use oxide_core::pipeline::PipelineDefinition;
-
 
 #[tokio::test]
 async fn test_artifact_collection() {
@@ -31,7 +29,9 @@ stages:
         verbose: true,
     };
 
-    let res = execute_pipeline(&def, &config, None).await.expect("Execution failed");
+    let res = execute_pipeline(&def, &config, None)
+        .await
+        .expect("Execution failed");
     assert!(res.success, "Pipeline should succeed");
 
     // Check artifacts dir

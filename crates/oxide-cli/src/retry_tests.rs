@@ -1,7 +1,5 @@
-
-use crate::executor::{execute_pipeline, ExecutorConfig};
+use crate::executor::{ExecutorConfig, execute_pipeline};
 use oxide_core::pipeline::PipelineDefinition;
-
 
 #[tokio::test]
 async fn test_retry_logic() {
@@ -28,7 +26,7 @@ stages:
 "#;
 
     let def: PipelineDefinition = serde_yaml::from_str(yaml).expect("Failed to parse YAML");
-    
+
     // Use a temp dir
     let temp_dir = tempfile::tempdir().unwrap();
 
@@ -39,10 +37,12 @@ stages:
         verbose: true,
     };
 
-    let result = execute_pipeline(&def, &config, None).await.expect("Execution failed");
+    let result = execute_pipeline(&def, &config, None)
+        .await
+        .expect("Execution failed");
 
     assert!(result.success, "Pipeline should succeed after retry");
-    // Verify it took 2 attempts? 
-    // We can't easily inspect internal logs here, but success proves it retried, 
+    // Verify it took 2 attempts?
+    // We can't easily inspect internal logs here, but success proves it retried,
     // because first run GUARANTEED exit 1.
 }

@@ -1,5 +1,4 @@
-
-use crate::executor::{execute_pipeline, ExecutorConfig};
+use crate::executor::{ExecutorConfig, execute_pipeline};
 use oxide_core::pipeline::PipelineDefinition;
 #[tokio::test]
 async fn test_cache_plugin() {
@@ -30,7 +29,8 @@ stages:
           method: save
 "#;
 
-    let def_save: PipelineDefinition = serde_yaml::from_str(yaml_save).expect("Failed to parse YAML (Save)");
+    let def_save: PipelineDefinition =
+        serde_yaml::from_str(yaml_save).expect("Failed to parse YAML (Save)");
     let temp_ws_save = tempfile::tempdir().unwrap();
 
     let config_save = ExecutorConfig {
@@ -40,14 +40,16 @@ stages:
         verbose: true,
     };
 
-    let res_save = execute_pipeline(&def_save, &config_save, None).await.expect("Save pipeline failed");
+    let res_save = execute_pipeline(&def_save, &config_save, None)
+        .await
+        .expect("Save pipeline failed");
     assert!(res_save.success, "Save pipeline should succeed");
 
     // Verify cache file exists in cache_home
-    // oxide-cache uses: cache_home/oxide/oxide-ci/{key}.tar.bin ? 
+    // oxide-cache uses: cache_home/oxide/oxide-ci/{key}.tar.bin ?
     // Wait, `ProjectDirs::from("io", "oxide", "oxide-ci")` -> `~/.cache/oxide/oxide-ci`.
     // If I set XDG_CACHE_HOME = `/tmp/xyz`, then it becomes `/tmp/xyz/oxide/oxide-ci`.
-    // I need to check where it actually puts it. 
+    // I need to check where it actually puts it.
     // `files = walkdir`.
 
     // 2. Restore Cache Pipeline
@@ -80,7 +82,8 @@ stages:
           fi
 "#;
 
-    let def_restore: PipelineDefinition = serde_yaml::from_str(yaml_restore).expect("Failed to parse YAML (Restore)");
+    let def_restore: PipelineDefinition =
+        serde_yaml::from_str(yaml_restore).expect("Failed to parse YAML (Restore)");
     let temp_ws_restore = tempfile::tempdir().unwrap();
 
     let config_restore = ExecutorConfig {
@@ -90,7 +93,9 @@ stages:
         verbose: true,
     };
 
-    let res_restore = execute_pipeline(&def_restore, &config_restore, None).await.expect("Restore pipeline failed");
+    let res_restore = execute_pipeline(&def_restore, &config_restore, None)
+        .await
+        .expect("Restore pipeline failed");
     assert!(res_restore.success, "Restore pipeline should succeed");
 
     // Cleanup (TempDirs drop automatically, but env var persists in process?)

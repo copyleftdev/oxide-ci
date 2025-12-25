@@ -241,13 +241,21 @@ impl StepRunner for ContainerRunner {
         // Get image from step variables or use default
         // Get image from step configuration or variables
         let image = if let Some(env) = &ctx.step.environment {
-             if let Some(container_config) = &env.container {
-                 container_config.image.clone()
-             } else {
-                 ctx.step.variables.get("OXIDE_CONTAINER_IMAGE").cloned().unwrap_or_else(|| "alpine:latest".to_string())
-             }
+            if let Some(container_config) = &env.container {
+                container_config.image.clone()
+            } else {
+                ctx.step
+                    .variables
+                    .get("OXIDE_CONTAINER_IMAGE")
+                    .cloned()
+                    .unwrap_or_else(|| "alpine:latest".to_string())
+            }
         } else {
-             ctx.step.variables.get("OXIDE_CONTAINER_IMAGE").cloned().unwrap_or_else(|| "alpine:latest".to_string())
+            ctx.step
+                .variables
+                .get("OXIDE_CONTAINER_IMAGE")
+                .cloned()
+                .unwrap_or_else(|| "alpine:latest".to_string())
         };
 
         // Handle retries
@@ -287,14 +295,14 @@ impl StepRunner for ContainerRunner {
             return false;
         }
 
-        if let Some(env) = &step.environment {
-             if env.container.is_some() {
-                 return true;
-             }
-             // Or env_type container?
-             // pipeline.rs says: `env_type: EnvironmentType`
+        if let Some(env) = &step.environment
+            && env.container.is_some()
+        {
+            return true;
         }
-        
+        // Or env_type container?
+        // pipeline.rs says: `env_type: EnvironmentType`
+
         step.variables.contains_key("OXIDE_CONTAINER_IMAGE")
     }
 }

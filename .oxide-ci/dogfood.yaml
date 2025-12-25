@@ -1,0 +1,9 @@
+name: Oxide Self-Test
+version: "1"
+stages:
+  - name: verify-env
+    steps:
+      - name: Check Rust Version
+        run: rustc --version && cargo --version
+      - name: Hello Oxide
+        run: echo "Hello from Oxide CI running inside Oxide CI!"

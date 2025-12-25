@@ -7,7 +7,7 @@ use oxide_core::Result;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// Configuration for the plugin host.
 #[derive(Debug, Clone)]
@@ -139,16 +139,16 @@ impl PluginHost {
 
             // Create plugin instance
             // Note: with_wasi(true) enables WASI. Check allow_network usage later.
-            let mut plugin = Plugin::new(&manifest, [], true)
-                .map_err(|e| oxide_core::Error::Internal(format!("Failed to create plugin: {}", e)))?;
+            let mut plugin = Plugin::new(&manifest, [], true).map_err(|e| {
+                oxide_core::Error::Internal(format!("Failed to create plugin: {}", e))
+            })?;
 
             // Call the "run" function
             plugin
                 .call::<&[u8], Vec<u8>>("run", &input_json)
-                .map_err(|e| {
-                    oxide_core::Error::Internal(format!("Plugin execution failed: {}", e))
-                })
-        }).await
+                .map_err(|e| oxide_core::Error::Internal(format!("Plugin execution failed: {}", e)))
+        })
+        .await
         .map_err(|e| oxide_core::Error::Internal(format!("Plugin task join error: {}", e)))??;
 
         // Deserialize output

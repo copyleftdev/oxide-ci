@@ -43,7 +43,10 @@ impl oxide_core::ports::ApprovalRepository for MockApprovalRepository {
         Ok(())
     }
 
-    async fn get(&self, _id: oxide_core::ids::ApprovalGateId) -> oxide_core::Result<Option<oxide_core::approval::ApprovalGate>> {
+    async fn get(
+        &self,
+        _id: oxide_core::ids::ApprovalGateId,
+    ) -> oxide_core::Result<Option<oxide_core::approval::ApprovalGate>> {
         Ok(None)
     }
 
@@ -51,12 +54,13 @@ impl oxide_core::ports::ApprovalRepository for MockApprovalRepository {
         Ok(())
     }
 
-    async fn list(&self, _run_id: Option<oxide_core::ids::RunId>) -> oxide_core::Result<Vec<oxide_core::approval::ApprovalGate>> {
+    async fn list(
+        &self,
+        _run_id: Option<oxide_core::ids::RunId>,
+    ) -> oxide_core::Result<Vec<oxide_core::approval::ApprovalGate>> {
         Ok(vec![])
     }
 }
-
-
 
 /// Create an HTTP client for testing.
 pub fn test_client() -> Client {

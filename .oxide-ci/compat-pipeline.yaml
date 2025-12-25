@@ -1,0 +1,43 @@
+name: GitHub Action Compatibility
+version: "1"
+stages:
+  - name: setup
+    steps:
+      # Replace actions/checkout
+      - name: Checkout
+        plugin: git-checkout
+        with:
+          repository: https://github.com/copyleftdev/oxide-ci.git
+          path: "source"
+          ref: main
+
+      # Replace dtolnay/rust-toolchain
+      - name: Setup Rust
+        plugin: rust-toolchain
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+  - name: test
+    depends_on: [setup]
+    steps:
+      - name: Unit Tests
+        # Run inside the checked out source
+        run: cd source && cargo test --workspace --lib
+
+      # Replace actions/cache
+      - name: Cache dependencies
+        plugin: cache
+        with:
+          key: cargo-registry-${{ hashFiles('source/**/Cargo.lock') }}
+          paths:
+            - ~/.cargo/registry
+            - ~/.cargo/git
+            - source/target
+          method: save
+
+  - name: verify-plugins
+    depends_on: [test]
+    steps:
+      - name: Echo Success
+        run: echo "Compatibility layer functioning correctly."
