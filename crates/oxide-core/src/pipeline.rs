@@ -211,7 +211,7 @@ pub struct StepDefinition {
     pub name: String,
     #[serde(default)]
     pub display_name: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "uses")]
     pub plugin: Option<String>,
     #[serde(default)]
     pub with: HashMap<String, serde_json::Value>,

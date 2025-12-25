@@ -693,7 +693,11 @@ async fn execute_step_attempt(
 
             // Execute plugin
             // TODO: async execution and timeout support for plugins
-            let result = plugin.execute(&input);
+            // Execute plugin in a blocking task to allow it to use its own runtime if needed
+            let result = tokio::task::spawn_blocking(move || plugin.execute(&input))
+                .await
+                .map_err(|e| oxide_core::Error::Internal(format!("Plugin execution failed: {}", e)))
+                .and_then(|res| res);
 
             let duration_ms = start_plugin.elapsed().as_millis() as u64;
 

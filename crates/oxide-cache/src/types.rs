@@ -16,6 +16,9 @@ pub struct CacheRestoreRequest {
     pub paths: Vec<PathBuf>,
     /// Scope for cache isolation (e.g., pipeline ID).
     pub scope: Option<String>,
+    /// Base directory for relative paths (default: current dir).
+    #[serde(default)]
+    pub base_dir: Option<PathBuf>,
 }
 
 /// Request to save a cache entry.
@@ -29,6 +32,9 @@ pub struct CacheSaveRequest {
     pub ttl_seconds: Option<u64>,
     /// Scope for cache isolation.
     pub scope: Option<String>,
+    /// Base directory for relative paths (default: current dir).
+    #[serde(default)]
+    pub base_dir: Option<PathBuf>,
     /// Compression algorithm.
     #[serde(default)]
     pub compression: CompressionType,

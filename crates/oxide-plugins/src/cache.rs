@@ -1,8 +1,8 @@
 use crate::{Plugin, PluginCallInput, PluginCallOutput};
 use oxide_core::Result;
-use std::fs;
-use std::path::{Path, PathBuf};
-use tracing::{info, warn};
+use oxide_cache::{FilesystemProvider, CacheProvider, CacheRestoreRequest, CacheSaveRequest, CompressionType};
+use std::path::PathBuf;
+use tracing::{info};
 
 pub struct CachePlugin;
 
@@ -22,100 +22,79 @@ impl Plugin for CachePlugin {
             .and_then(|v| v.as_str())
             .ok_or_else(|| oxide_core::Error::Internal("Missing 'key' input".into()))?;
         
+        // Restore keys (optional)
+        let restore_keys: Vec<String> = input.params.get("restore-keys")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+            .unwrap_or_default();
+
         let paths_val = input.params.get("paths")
             .ok_or_else(|| oxide_core::Error::Internal("Missing 'paths' input".into()))?;
             
-        let paths: Vec<String> = if let Some(arr) = paths_val.as_array() {
-            arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
+        let paths: Vec<PathBuf> = if let Some(arr) = paths_val.as_array() {
+            arr.iter().filter_map(|v| v.as_str().map(PathBuf::from)).collect()
         } else if let Some(s) = paths_val.as_str() {
-            vec![s.to_string()]
+            vec![PathBuf::from(s)]
         } else {
              return Ok(PluginCallOutput::failure("Invalid 'paths' format"));
         };
 
-        // Cache storage location (mock implementation for now - normally would be S3/GCS or shared vol)
-        let cache_base = PathBuf::from("/tmp/oxide-cache");
-        let cache_dir = cache_base.join(key);
+        // Cache provider (using default local FS provider for now)
+        // In the future this could be injected or configured via Env
+        let provider = FilesystemProvider::default();
 
-        // Determine action: restore or save? 
-        // Typically in CI, cache restores at start, saves at end (post-step).
-        // Since we don't have post-steps yet, we'll look for an explicit "action" input or infer?
-        // Actually, typical usage:
-        // - name: Restore cache
-        //   uses: cache
-        //   with:
-        //     key: ...
-        //     paths: ...
-        // If cache exists -> restore. If not -> do nothing (and expectation is a post-step saves it).
-        // BUT, since we are doing a simplified plugin system without post-steps yet:
-        // Let's add an explicit 'method': 'save' or 'restore'. Default 'restore'.
-        
         let method = input.params.get("method")
             .and_then(|v| v.as_str())
             .unwrap_or("restore");
 
+        // Runtime for async provider calls
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| oxide_core::Error::Internal(format!("Failed to build runtime: {}", e)))?;
+
         match method {
             "restore" => {
-                if cache_dir.exists() {
-                     info!("Restoring cache key: {}", key);
-                     for path_str in &paths {
-                         let src = cache_dir.join(path_str);
-                         let dest = Path::new(&input.workspace).join(path_str);
-                         if src.exists() {
-                            if let Some(parent) = dest.parent() {
-                                fs::create_dir_all(parent).map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-                            }
-                             copy_dir_all(&src, &dest)?;
-                         }
-                     }
-                     let mut out = PluginCallOutput::success();
-                     out.outputs.insert("cache-hit".to_string(), "true".to_string());
-                     Ok(out)
+                info!("Restoring cache key: {}", key);
+                
+                let req = CacheRestoreRequest {
+                    key: key.to_string(),
+                    restore_keys,
+                    paths,
+                    scope: None, // Could use pipeline ID if available in env
+                    base_dir: Some(PathBuf::from(&input.workspace)),
+                };
+
+                let res = rt.block_on(provider.restore(&req))?;
+
+                let mut out = PluginCallOutput::success();
+                if res.matched_key.is_some() {
+                    info!("Cache HIT: {}", res.matched_key.as_deref().unwrap_or("unknown"));
+                    out.outputs.insert("cache-hit".to_string(), "true".to_string());
                 } else {
-                     info!("Cache key not found: {}", key);
-                     let mut out = PluginCallOutput::success();
-                     out.outputs.insert("cache-hit".to_string(), "false".to_string());
-                     Ok(out)
+                    info!("Cache MISS: {}", key);
+                    out.outputs.insert("cache-hit".to_string(), "false".to_string());
                 }
+                Ok(out)
             }
             "save" => {
                 info!("Saving cache key: {}", key);
-                 fs::create_dir_all(&cache_dir).map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-                 for path_str in &paths {
-                     let src = Path::new(&input.workspace).join(path_str);
-                     let dest = cache_dir.join(path_str);
-                     if src.exists() {
-                        if let Some(parent) = dest.parent() {
-                            fs::create_dir_all(parent).map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-                        }
-                         copy_dir_all(&src, &dest)?;
-                     } else {
-                         warn!("Path not found for caching: {}", path_str);
-                     }
-                 }
-                 Ok(PluginCallOutput::success())
+                
+                let req = CacheSaveRequest {
+                    key: key.to_string(),
+                    paths,
+                    ttl_seconds: None, // Default TTL
+                    scope: None,
+                    base_dir: Some(PathBuf::from(&input.workspace)),
+                    compression: CompressionType::Zstd,
+                };
+
+                rt.block_on(provider.save(&req))?;
+                
+                Ok(PluginCallOutput::success())
             }
             _ => Ok(PluginCallOutput::failure(format!("Unknown method: {}", method))),
         }
     }
 }
 
-fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
-    if src.is_dir() {
-        if !dst.exists() {
-             fs::create_dir_all(dst).map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-        }
-        for entry in fs::read_dir(src).map_err(|e| oxide_core::Error::Internal(e.to_string()))? {
-            let entry = entry.map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-            let ty = entry.file_type().map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-            if ty.is_dir() {
-                copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
-            } else {
-                fs::copy(entry.path(), dst.join(entry.file_name())).map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-            }
-        }
-    } else {
-         fs::copy(src, dst).map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
-    }
-    Ok(())
-}
