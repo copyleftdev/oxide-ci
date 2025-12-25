@@ -25,7 +25,7 @@ async fn test_pipeline_creation_and_run_queuing() {
     // Create pipeline
     let pipeline = PipelineFixture::simple();
     pipeline_repo
-        .create(&pipeline)
+        .create(&pipeline.definition)
         .await
         .expect("Failed to create pipeline");
 
@@ -73,7 +73,7 @@ async fn test_multi_stage_pipeline_run() {
     // Create multi-stage pipeline
     let pipeline = PipelineFixture::multi_stage();
     pipeline_repo
-        .create(&pipeline)
+        .create(&pipeline.definition)
         .await
         .expect("Failed to create pipeline");
 
@@ -98,7 +98,7 @@ async fn test_parallel_pipeline_dag() {
     // Create parallel pipeline
     let pipeline = PipelineFixture::parallel();
     pipeline_repo
-        .create(&pipeline)
+        .create(&pipeline.definition)
         .await
         .expect("Failed to create pipeline");
 
@@ -122,7 +122,7 @@ async fn test_run_lifecycle() {
 
     // Setup
     let pipeline = PipelineFixture::simple();
-    pipeline_repo.create(&pipeline).await.unwrap();
+    pipeline_repo.create(&pipeline.definition).await.unwrap();
 
     // Create queued run
     let mut run = RunFixture::queued(&pipeline);
@@ -155,7 +155,7 @@ async fn test_multiple_runs_for_pipeline() {
 
     // Create pipeline
     let pipeline = PipelineFixture::simple();
-    pipeline_repo.create(&pipeline).await.unwrap();
+    pipeline_repo.create(&pipeline.definition).await.unwrap();
 
     // Create multiple runs
     for i in 1..=5 {

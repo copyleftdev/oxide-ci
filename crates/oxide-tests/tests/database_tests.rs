@@ -21,7 +21,7 @@ async fn test_pipeline_crud() {
 
     // Create
     let pipeline = PipelineFixture::simple();
-    repo.create(&pipeline)
+    repo.create(&pipeline.definition)
         .await
         .expect("Failed to create pipeline");
 
@@ -57,7 +57,7 @@ async fn test_pipeline_list_pagination() {
     for i in 0..5 {
         let mut pipeline = PipelineFixture::simple();
         pipeline.name = format!("pipeline-{}", i);
-        repo.create(&pipeline)
+        repo.create(&pipeline.definition)
             .await
             .expect("Failed to create pipeline");
     }
@@ -85,7 +85,7 @@ async fn test_run_crud() {
     // Create pipeline first
     let pipeline = PipelineFixture::simple();
     pipeline_repo
-        .create(&pipeline)
+        .create(&pipeline.definition)
         .await
         .expect("Failed to create pipeline");
 
@@ -120,7 +120,7 @@ async fn test_run_status_update() {
 
     // Setup
     let pipeline = PipelineFixture::simple();
-    pipeline_repo.create(&pipeline).await.unwrap();
+    pipeline_repo.create(&pipeline.definition).await.unwrap();
 
     let mut run = RunFixture::pending(&pipeline);
     run_repo.create(&run).await.unwrap();
