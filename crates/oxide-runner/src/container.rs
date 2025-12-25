@@ -239,12 +239,16 @@ impl StepRunner for ContainerRunner {
             .ok_or_else(|| oxide_core::Error::Internal("No command to run".to_string()))?;
 
         // Get image from step variables or use default
-        let image = ctx
-            .step
-            .variables
-            .get("OXIDE_CONTAINER_IMAGE")
-            .cloned()
-            .unwrap_or_else(|| "alpine:latest".to_string());
+        // Get image from step configuration or variables
+        let image = if let Some(env) = &ctx.step.environment {
+             if let Some(container_config) = &env.container {
+                 container_config.image.clone()
+             } else {
+                 ctx.step.variables.get("OXIDE_CONTAINER_IMAGE").cloned().unwrap_or_else(|| "alpine:latest".to_string())
+             }
+        } else {
+             ctx.step.variables.get("OXIDE_CONTAINER_IMAGE").cloned().unwrap_or_else(|| "alpine:latest".to_string())
+        };
 
         // Handle retries
         let mut last_error = None;
@@ -279,6 +283,18 @@ impl StepRunner for ContainerRunner {
 
     fn can_handle(&self, step: &StepDefinition) -> bool {
         // Handle steps that have container environment configured
-        step.run.is_some() && step.variables.contains_key("OXIDE_CONTAINER_IMAGE")
+        if step.run.is_none() {
+            return false;
+        }
+
+        if let Some(env) = &step.environment {
+             if env.container.is_some() {
+                 return true;
+             }
+             // Or env_type container?
+             // pipeline.rs says: `env_type: EnvironmentType`
+        }
+        
+        step.variables.contains_key("OXIDE_CONTAINER_IMAGE")
     }
 }

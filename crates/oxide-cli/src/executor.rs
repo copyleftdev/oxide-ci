@@ -12,6 +12,7 @@ use oxide_core::pipeline::{
     ConditionExpression, PipelineDefinition, StageDefinition, StepDefinition,
 };
 use oxide_cache::{archiver, types::CompressionType};
+use oxide_runner::{ContainerRunner, OutputLine, RunnerConfig, StepRunner, StepContext};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -813,6 +814,74 @@ async fn execute_step_attempt(
                 exit_code: 1,
                 duration_ms: 0,
             });
+        }
+    }
+
+    // Handle container steps
+    let needs_container = if let Some(env) = &step.environment {
+        env.container.is_some()
+    } else {
+        step.variables.contains_key("OXIDE_CONTAINER_IMAGE")
+    };
+
+    if needs_container {
+        match ContainerRunner::new(RunnerConfig::default()) {
+            Ok(runner) => {
+                if runner.can_handle(step) {
+                    if attempt == 1 {
+                        println!(
+                            "    [{}/{}] {} (container)",
+                            step_num,
+                            total_steps,
+                            style(&step.name).bold()
+                        );
+                    }
+
+                    // Prepare context
+                    let mut merged_vars = ctx.variables.clone();
+                    for (k, v) in &step.variables {
+                        merged_vars.insert(k.clone(), ctx.interpolate(v));
+                    }
+
+                    let step_ctx = StepContext {
+                        workspace: ctx.workspace.clone(),
+                        variables: merged_vars,
+                        secrets: HashMap::new(),
+                        step: step.clone(),
+                    };
+
+                    let (tx, mut rx) = tokio::sync::mpsc::channel::<OutputLine>(100);
+
+                    let printer = tokio::spawn(async move {
+                        while let Some(line) = rx.recv().await {
+                            println!("      | {}", line.content);
+                        }
+                    });
+
+                    let res = runner.execute(&step_ctx, tx).await;
+                    let _ = printer.await;
+
+                    match res {
+                        Ok(r) => {
+                            let success = r.success;
+                            return Ok(StepResult {
+                                success,
+                                exit_code: r.exit_code,
+                                duration_ms: r.duration_ms,
+                            });
+                        }
+                        Err(e) => return Err(Box::new(e)),
+                    }
+                }
+            }
+            Err(e) => {
+                println!("      {} Docker connection failed: {}", style("✗").red(), e);
+                return Ok(StepResult {
+                    success: false,
+                    exit_code: 1,
+                    duration_ms: 0,
+                });
+            }
         }
     }
 

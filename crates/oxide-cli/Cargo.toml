@@ -12,6 +12,7 @@ path = "src/main.rs"
 oxide-core = { workspace = true }
 oxide-plugins = { workspace = true }
 oxide-cache = { workspace = true }
+oxide-runner = { workspace = true }
 
 clap = { workspace = true }
 tokio = { workspace = true, features = ["process", "fs", "io-util"] }
