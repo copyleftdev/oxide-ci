@@ -2,8 +2,6 @@
 
 <img src="docs/media/logo.png" alt="Oxide CI Logo" width="200"/>
 
-# Oxide CI
-
 **A Modern, Extensible, High-Performance CI/CD Engine written in Rust.**
 
 > [!WARNING]
