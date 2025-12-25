@@ -126,21 +126,30 @@ impl PluginHost {
             oxide_core::Error::Internal(format!("Failed to serialize input: {}", e))
         })?;
 
-        // Create Extism manifest
-        let wasm = Wasm::data(loaded.wasm_bytes.clone());
-        let manifest = Manifest::new([wasm]).with_timeout(self.config.default_timeout);
+        // Clone needed data for the blocking task
+        let wasm_bytes = loaded.wasm_bytes.clone();
+        let timeout = self.config.default_timeout;
+        let _allow_network = self.config.allow_network; // Reserved for when we configure WASI
 
-        // Create plugin instance
-        let mut plugin = Plugin::new(&manifest, [], true)
-            .map_err(|e| oxide_core::Error::Internal(format!("Failed to create plugin: {}", e)))?;
+        // Execute in blocking task to avoid stalling async runtime
+        let output_bytes = tokio::task::spawn_blocking(move || {
+            // Create Extism manifest
+            let wasm = Wasm::data(wasm_bytes);
+            let manifest = Manifest::new([wasm]).with_timeout(timeout);
 
-        // Call the "run" function
-        let output_bytes = plugin
-            .call::<&[u8], Vec<u8>>("run", &input_json)
-            .map_err(|e| {
-                error!(error = %e, "Plugin execution failed");
-                oxide_core::Error::Internal(format!("Plugin execution failed: {}", e))
-            })?;
+            // Create plugin instance
+            // Note: with_wasi(true) enables WASI. Check allow_network usage later.
+            let mut plugin = Plugin::new(&manifest, [], true)
+                .map_err(|e| oxide_core::Error::Internal(format!("Failed to create plugin: {}", e)))?;
+
+            // Call the "run" function
+            plugin
+                .call::<&[u8], Vec<u8>>("run", &input_json)
+                .map_err(|e| {
+                    oxide_core::Error::Internal(format!("Plugin execution failed: {}", e))
+                })
+        }).await
+        .map_err(|e| oxide_core::Error::Internal(format!("Plugin task join error: {}", e)))??;
 
         // Deserialize output
         let output: PluginCallOutput = serde_json::from_slice(&output_bytes).map_err(|e| {

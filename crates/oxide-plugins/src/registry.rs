@@ -59,9 +59,43 @@ impl PluginRegistry {
                 oxide_core::Error::Internal(format!("Failed to create cache dir: {}", e))
             })?;
 
-        // TODO: Actually fetch from registry
-        // For now, return not found
-        Err(oxide_core::Error::PluginNotFound(name.to_string()))
+        // Construct URL
+        let url = format!("{}/{}/{}.wasm", self.config.url, name, version_str);
+        debug!(url = %url, "Downloading plugin");
+
+        // Fetch from registry
+        let client = reqwest::Client::new();
+        let mut request = client.get(&url);
+        
+        if let Some(token) = &self.config.auth_token {
+            request = request.header("Authorization", format!("Bearer {}", token));
+        }
+
+        let response = request.send().await.map_err(|e| {
+            oxide_core::Error::Internal(format!("Failed to fetch plugin: {}", e))
+        })?;
+
+        if !response.status().is_success() {
+            if response.status() == reqwest::StatusCode::NOT_FOUND {
+                return Err(oxide_core::Error::PluginNotFound(name.to_string()));
+            }
+            return Err(oxide_core::Error::Internal(format!(
+                "Registry returned error: {}",
+                response.status()
+            )));
+        }
+
+        let bytes = response.bytes().await.map_err(|e| {
+            oxide_core::Error::Internal(format!("Failed to read plugin body: {}", e))
+        })?;
+
+        // Write to cache
+        tokio::fs::write(&cache_path, bytes).await.map_err(|e| {
+            oxide_core::Error::Internal(format!("Failed to write plugin to cache: {}", e))
+        })?;
+
+        info!(path = %cache_path.display(), "Plugin downloaded and cached");
+        Ok(cache_path)
     }
 
     /// Get plugin manifest from registry.
