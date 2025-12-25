@@ -90,7 +90,7 @@ async fn test_run_crud() {
         .expect("Failed to create pipeline");
 
     // Create run
-    let run = RunFixture::pending(&pipeline);
+    let run = RunFixture::queued(&pipeline);
     run_repo.create(&run).await.expect("Failed to create run");
 
     // Read
@@ -122,7 +122,7 @@ async fn test_run_status_update() {
     let pipeline = PipelineFixture::simple();
     pipeline_repo.create(&pipeline.definition).await.unwrap();
 
-    let mut run = RunFixture::pending(&pipeline);
+    let mut run = RunFixture::queued(&pipeline);
     run_repo.create(&run).await.unwrap();
 
     // Update status

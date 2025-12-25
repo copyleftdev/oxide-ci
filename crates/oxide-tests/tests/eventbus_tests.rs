@@ -82,7 +82,7 @@ async fn test_subscribe_and_receive() {
         .expect("Stream ended");
 
     match received {
-        Event::RunQueued(payload) => {
+        Ok(Event::RunQueued(payload)) => {
             assert_eq!(payload.run_id, run_id);
             assert_eq!(payload.pipeline_id, pipeline_id);
         }
@@ -134,7 +134,10 @@ async fn test_multiple_event_types() {
     let started = Event::RunStarted(RunStartedPayload {
         run_id,
         pipeline_id,
+        pipeline_name: "test".to_string(),
+        run_number: 1,
         agent_id: AgentId::new(),
+        agent_name: Some("test-agent".to_string()),
         started_at: chrono::Utc::now(),
     });
 
