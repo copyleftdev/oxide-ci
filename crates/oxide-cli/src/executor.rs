@@ -13,7 +13,7 @@ use oxide_core::pipeline::{
 };
 use oxide_cache::{archiver, types::CompressionType};
 use oxide_runner::{ContainerRunner, OutputLine, RunnerConfig, StepRunner, StepContext};
-use regex::Regex;
+// use regex::Regex; // Removed as it's now internal to oxide-core
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -22,6 +22,7 @@ use tokio::process::Command;
 use tokio::task::JoinSet;
 use tokio::time::{sleep, timeout, Duration};
 use oxide_plugins::{get_builtin_plugin, manifest::PluginCallInput};
+use oxide_core::interpolation::InterpolationContext;
 
 use crate::dag::DagBuilder;
 
@@ -30,14 +31,8 @@ use crate::dag::DagBuilder;
 /// Tracks variables, step outputs, and matrix values for interpolation.
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
-    /// Pipeline and stage variables
-    pub variables: HashMap<String, String>,
-    /// Step outputs: "step_name.output_key" -> value
-    pub outputs: HashMap<String, String>,
-    /// Matrix values for current job
-    pub matrix: HashMap<String, String>,
-    /// Secrets to mask in output
-    pub secrets: HashMap<String, String>,
+    /// Inner interpolation context
+    pub ctx: InterpolationContext,
     /// Working directory
     pub workspace: PathBuf,
 }
@@ -46,66 +41,20 @@ impl ExecutionContext {
     /// Create a new execution context.
     pub fn new(workspace: PathBuf) -> Self {
         Self {
-            variables: HashMap::new(),
-            outputs: HashMap::new(),
-            matrix: HashMap::new(),
-            secrets: HashMap::new(),
+            ctx: InterpolationContext::new(),
             workspace,
         }
     }
 
     /// Interpolate variables in a string.
-    ///
-    /// Supports:
-    /// - `${{ variable }}` - direct variable lookup
-    /// - `${{ env.VAR }}` - environment variable
-    /// - `${{ matrix.key }}` - matrix value
-    /// - `${{ steps.name.outputs.key }}` - step output
     pub fn interpolate(&self, input: &str) -> String {
-        let re = Regex::new(r"\$\{\{\s*([^}]+)\s*\}\}").unwrap();
-
-        re.replace_all(input, |caps: &regex::Captures| {
-            let expr = caps.get(1).map_or("", |m| m.as_str()).trim();
-            self.resolve_expression(expr)
-        })
-        .to_string()
-    }
-
-    /// Resolve a single expression like "env.VAR" or "steps.name.outputs.key".
-    fn resolve_expression(&self, expr: &str) -> String {
-        // Handle env.VAR
-        if let Some(var_name) = expr.strip_prefix("env.") {
-            return self
-                .variables
-                .get(var_name)
-                .cloned()
-                .or_else(|| std::env::var(var_name).ok())
-                .unwrap_or_default();
-        }
-
-        // Handle matrix.key
-        if let Some(key) = expr.strip_prefix("matrix.") {
-            return self.matrix.get(key).cloned().unwrap_or_default();
-        }
-
-        // Handle steps.name.outputs.key
-        if let Some(rest) = expr.strip_prefix("steps.")
-            && let Some(outputs_idx) = rest.find(".outputs.")
-        {
-            let step_name = &rest[..outputs_idx];
-            let output_key = &rest[outputs_idx + 9..]; // ".outputs." is 9 chars
-            let lookup_key = format!("{}.{}", step_name, output_key);
-            return self.outputs.get(&lookup_key).cloned().unwrap_or_default();
-        }
-
-        // Direct variable lookup
-        self.variables.get(expr).cloned().unwrap_or_default()
+        self.ctx.interpolate(input)
     }
 
     /// Set a step output.
     pub fn set_output(&mut self, step_name: &str, key: &str, value: String) {
         let lookup_key = format!("{}.{}", step_name, key);
-        self.outputs.insert(lookup_key, value);
+        self.ctx.outputs.insert(lookup_key, value);
     }
 
     /// Parse outputs from OXIDE_OUTPUT file content.
@@ -131,66 +80,17 @@ impl ExecutionContext {
     /// Add a secret to the context.
     #[allow(dead_code)]
     pub fn add_secret(&mut self, key: impl Into<String>, value: impl Into<String>) {
-        self.secrets.insert(key.into(), value.into());
+        self.ctx.secrets.insert(key.into(), value.into());
     }
 
     /// Mask secrets in the input string.
     pub fn mask_secrets(&self, input: &str) -> String {
-        let mut output = input.to_string();
-        for value in self.secrets.values() {
-            if !value.is_empty() {
-                output = output.replace(value, "***");
-            }
-        }
-        output
+        self.ctx.mask_secrets(input)
     }
 
     /// Evaluate a condition expression.
     pub fn evaluate_condition(&self, condition: &ConditionExpression) -> bool {
-        match condition {
-            ConditionExpression::Simple(expr) => self.evaluate_string_expression(expr),
-            ConditionExpression::Structured { if_expr, unless } => {
-                if let Some(expr) = if_expr
-                    && !self.evaluate_string_expression(expr)
-                {
-                    return false;
-                }
-                if let Some(expr) = unless
-                    && self.evaluate_string_expression(expr)
-                {
-                    return false;
-                }
-                true
-            }
-        }
-    }
-
-    /// Evaluate a simple string expression (equality, inequality, contains).
-    fn evaluate_string_expression(&self, expr: &str) -> bool {
-        let interpolated = self.interpolate(expr);
-        let trimmed = interpolated.trim();
-
-        // Boolean literals
-        if trimmed == "true" {
-            return true;
-        }
-        if trimmed == "false" {
-            return false;
-        }
-
-        // Operators
-        if let Some((left, right)) = trimmed.split_once("==") {
-            return left.trim() == right.trim();
-        }
-        if let Some((left, right)) = trimmed.split_once("!=") {
-            return left.trim() != right.trim();
-        }
-        if let Some((left, right)) = trimmed.split_once(" contains ") {
-            return left.trim().contains(right.trim());
-        }
-
-        // Default to false if not recognized (safe default)
-        false
+        self.ctx.evaluate_condition(condition)
     }
 }
 
@@ -251,12 +151,12 @@ pub async fn execute_pipeline(
 
     // Initialize execution context
     let mut ctx = ExecutionContext::new(config.workspace.clone());
-    ctx.variables = config.variables.clone();
-    ctx.secrets = config.secrets.clone();
+    ctx.ctx.variables = config.variables.clone();
+    ctx.ctx.secrets = config.secrets.clone();
 
     // Merge pipeline variables
     for (k, v) in &definition.variables {
-        ctx.variables.insert(k.clone(), v.clone());
+        ctx.ctx.variables.insert(k.clone(), v.clone());
     }
 
     println!(
@@ -316,7 +216,7 @@ pub async fn execute_pipeline(
 
                 join_set.spawn(async move {
                     let res = execute_stage(&stage, &mut stage_ctx, verbose).await;
-                    (stage_name, res, stage_ctx.outputs)
+                    (stage_name, res, stage_ctx.ctx.outputs)
                 });
             }
 
@@ -339,7 +239,7 @@ pub async fn execute_pipeline(
                                     completed_stages.insert(name);
                                     // Merge outputs back to main context for dependents
                                     for (k, v) in outputs {
-                                        ctx.outputs.insert(k, v);
+                                        ctx.ctx.outputs.insert(k, v);
                                     }
                                 } else {
                                     all_success = false;
@@ -427,15 +327,15 @@ async fn execute_stage(
     let mut all_success = true;
 
     // Save original variables to restore after stage
-    let original_vars = ctx.variables.clone();
+    let original_vars = ctx.ctx.variables.clone();
 
     // Merge stage variables
     for (k, v) in &stage.variables {
-        ctx.variables.insert(k.clone(), v.clone());
+        ctx.ctx.variables.insert(k.clone(), v.clone());
 
         // Populate matrix context if variable starts with matrix.
         if let Some(matrix_key) = k.strip_prefix("matrix.") {
-            ctx.matrix.insert(matrix_key.to_string(), v.clone());
+            ctx.ctx.matrix.insert(matrix_key.to_string(), v.clone());
         }
     }
 
@@ -450,7 +350,7 @@ async fn execute_stage(
             futures.push(async move {
                 let res =
                     execute_step(&step_ref, &mut step_ctx, verbose, idx + 1, step_count).await;
-                (step_ref.name, res, step_ctx.outputs)
+                (step_ref.name, res, step_ctx.ctx.outputs)
             });
         }
 
@@ -464,7 +364,7 @@ async fn execute_stage(
 
                     // Merge outputs
                     for (k, v) in outputs {
-                        ctx.outputs.insert(k, v);
+                        ctx.ctx.outputs.insert(k, v);
                     }
 
                     if !success {
@@ -531,7 +431,7 @@ async fn execute_stage(
     }
 
     // Restore original variables (but keep outputs)
-    ctx.variables = original_vars;
+    ctx.ctx.variables = original_vars;
 
     if all_success {
         println!(
@@ -737,7 +637,7 @@ async fn execute_step_attempt(
             }
             
             let mut env = HashMap::new();
-            for (k, v) in &ctx.variables {
+            for (k, v) in &ctx.ctx.variables {
                 env.insert(k.clone(), v.clone());
             }
             // Add step variables
@@ -841,7 +741,7 @@ async fn execute_step_attempt(
                     }
 
                     // Prepare context
-                    let mut merged_vars = ctx.variables.clone();
+                    let mut merged_vars = ctx.ctx.variables.clone();
                     for (k, v) in &step.variables {
                         merged_vars.insert(k.clone(), ctx.interpolate(v));
                     }
@@ -937,7 +837,7 @@ async fn execute_step_attempt(
     cmd.env("OXIDE_OUTPUT", &output_file);
 
     // Set environment variables from context
-    for (k, v) in &ctx.variables {
+    for (k, v) in &ctx.ctx.variables {
         cmd.env(k, v);
     }
     // Set step-specific variables (interpolated)
@@ -946,7 +846,7 @@ async fn execute_step_attempt(
     }
 
     // Set secrets as environment variables
-    for (k, v) in &ctx.secrets {
+    for (k, v) in &ctx.ctx.secrets {
         cmd.env(k, v);
     }
 
