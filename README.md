@@ -13,6 +13,8 @@
 [![Rust Version](https://img.shields.io/badge/rust-1.70%2B-fd4403?style=flat-square)](https://www.rust-lang.org)
 [![Documentation](https://img.shields.io/badge/docs-wiki-1e2e3a?style=flat-square)](https://github.com/copyleftdev/oxide-ci/wiki)
 
+<p align="center"><a href="https://tokentip.to/@copyleftdev"><img alt="Tip my tokens" src="https://tokentip.to/badge/copyleftdev.svg?logo=1"></a></p>
+
 ---
 
 </div>
