@@ -20,8 +20,9 @@
 
 use crate::e2e_support::{
     PY_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, require_docker,
-    run_pipeline,
+    run_pipeline, run_pipeline_with_secrets, stage_names,
 };
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;
@@ -271,4 +272,39 @@ stages:
 
     let result = run_pipeline(&yaml, workspace.path());
     assert_pipeline_passed(&result, &["install", "test"]);
+}
+
+#[test]
+fn secrets_reach_container_steps() {
+    require_docker();
+
+    let workspace = TempDir::new().unwrap();
+    write_python_project(workspace.path(), true);
+
+    // Shell steps received the pipeline's secrets; container steps were handed
+    // an empty map, so every secret silently vanished. Silently is the problem:
+    // the step just behaves as though the credential were never configured.
+    let mut secrets = HashMap::new();
+    secrets.insert("API_TOKEN".to_string(), "s3cr3t-value".to_string());
+
+    let yaml = format!(
+        r#"name: python-e2e-secrets
+version: "1"
+stages:
+  - name: check
+    steps:
+{}"#,
+        container_step(
+            "read-secret",
+            PY_IMAGE,
+            "python -c \"import os; assert os.environ['API_TOKEN'] == 's3cr3t-value', 'secret missing from container env'\"",
+        ),
+    );
+
+    let result = run_pipeline_with_secrets(&yaml, workspace.path(), secrets);
+    assert!(
+        result.success,
+        "secrets must reach the container environment; stages were {:?}",
+        stage_names(&result)
+    );
 }

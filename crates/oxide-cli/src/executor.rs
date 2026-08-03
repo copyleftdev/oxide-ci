@@ -817,15 +817,23 @@ async fn execute_step_attempt(
                     let step_ctx = StepContext {
                         workspace: ctx.workspace.clone(),
                         variables: merged_vars,
-                        secrets: HashMap::new(),
+                        // Container steps were being handed an empty map, so
+                        // every secret silently vanished: nothing reached the
+                        // container's environment and registry credentials
+                        // could never resolve. Shell steps already got them.
+                        secrets: ctx.ctx.secrets.clone(),
                         step: step.clone(),
                     };
 
                     let (tx, mut rx) = tokio::sync::mpsc::channel::<OutputLine>(100);
 
+                    // Container output has to be masked like shell output is.
+                    // Now that secrets actually reach container steps, printing
+                    // raw would turn a plumbing fix into a leak.
+                    let masker = ctx.ctx.clone();
                     let printer = tokio::spawn(async move {
                         while let Some(line) = rx.recv().await {
-                            println!("      | {}", line.content);
+                            println!("      | {}", masker.mask_secrets(&line.content));
                         }
                     });
 

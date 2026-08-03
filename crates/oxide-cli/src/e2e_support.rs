@@ -54,12 +54,20 @@ pub fn container_step(name: &str, image: &str, command: &str) -> String {
 }
 
 pub fn run_pipeline(yaml: &str, workspace: &Path) -> PipelineResult {
+    run_pipeline_with_secrets(yaml, workspace, HashMap::new())
+}
+
+pub fn run_pipeline_with_secrets(
+    yaml: &str,
+    workspace: &Path,
+    secrets: HashMap<String, String>,
+) -> PipelineResult {
     let definition: PipelineDefinition =
         serde_yaml::from_str(yaml).expect("pipeline fixture should parse");
     let config = ExecutorConfig {
         workspace: workspace.to_path_buf(),
         variables: HashMap::new(),
-        secrets: HashMap::new(),
+        secrets,
         verbose: false,
     };
     tokio::runtime::Builder::new_multi_thread()
