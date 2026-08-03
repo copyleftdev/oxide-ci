@@ -31,6 +31,10 @@ pub enum Error {
     #[error("Agent not found: {0}")]
     AgentNotFound(String),
 
+    // Approval errors
+    #[error("Approval gate not found: {0}")]
+    ApprovalGateNotFound(String),
+
     #[error("No available agents matching labels: {0:?}")]
     NoAvailableAgents(Vec<String>),
 

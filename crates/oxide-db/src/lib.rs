@@ -2,7 +2,9 @@
 
 pub mod repositories;
 
-pub use repositories::{PgAgentRepository, PgPipelineRepository, PgRunRepository};
+pub use repositories::{
+    PgAgentRepository, PgApprovalRepository, PgPipelineRepository, PgRunRepository,
+};
 
 use oxide_core::Result;
 use sqlx::PgPool;

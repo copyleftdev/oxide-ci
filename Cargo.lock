@@ -3543,6 +3543,7 @@ dependencies = [
  "hostname",
  "oxide-cache",
  "oxide-core",
+ "oxide-db",
  "oxide-nats",
  "oxide-plugins",
  "oxide-runner",
@@ -3553,6 +3554,7 @@ dependencies = [
  "sysinfo",
  "tokio",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3575,6 +3577,7 @@ dependencies = [
  "tower 0.5.2",
  "tower-http",
  "tracing",
+ "tracing-subscriber",
  "uuid 1.19.0",
 ]
 

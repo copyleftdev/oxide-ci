@@ -5,6 +5,10 @@ edition = "2024"
 license.workspace = true
 description = "Build agent for Oxide CI"
 
+[[bin]]
+name = "oxide-agent"
+path = "src/main.rs"
+
 [dependencies]
 oxide-core = { workspace = true }
 oxide-runner = { workspace = true }
@@ -17,6 +21,8 @@ oxide-trace = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+oxide-db = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }
 serde_yaml = "0.9"
