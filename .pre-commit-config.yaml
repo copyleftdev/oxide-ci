@@ -2,6 +2,17 @@
 # Install: pip install pre-commit && pre-commit install
 # Run manually: pre-commit run --all-files
 
+# Generated and fixture files whose bytes are the point. The whitespace hooks
+# would corrupt them: appending a newline to a fuzz corpus entry changes the
+# input being tested, and the Hypothesis and Playwright files are rewritten by
+# their own tooling anyway.
+exclude: |
+  (?x)^(
+    examples/rust-fuzzing/fuzz/corpus/.*|
+    examples/python-hypothesis/\.hypothesis/.*|
+    examples/typescript-playwright/test-results/.*
+  )$
+
 repos:
   - repo: local
     hooks:

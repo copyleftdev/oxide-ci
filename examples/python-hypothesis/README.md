@@ -65,7 +65,7 @@ class TestCalculatorStateMachine(RuleBasedStateMachine):
     @rule(value=st.floats())
     def add_value(self, value):
         self.calc.add(value)
-    
+
     @invariant()
     def value_is_finite(self):
         assert math.isfinite(self.calc.value)

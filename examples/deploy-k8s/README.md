@@ -55,7 +55,7 @@ Production uses GitOps pattern:
 image:
   repository: ghcr.io/myorg/myapp
   tag: latest
-  
+
 replicas: 1
 
 resources:

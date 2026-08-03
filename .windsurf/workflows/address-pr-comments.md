@@ -16,15 +16,15 @@ Workflow for addressing pull request review comments.
 
 3. **For EACH comment, do the following**
    Address one comment at a time:
-   
+
    a. Print out: "(index). From [user] on [file]:[line] — [body]"
-   
+
    b. Read and analyze the file and the line range mentioned
-   
+
    c. If you don't understand the comment:
       - Ask for clarification
       - Or note it needs manual attention
-   
+
    d. If you can address the comment:
       - Make the code change
       - Verify the change compiles: `cargo check`

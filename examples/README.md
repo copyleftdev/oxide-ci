@@ -58,7 +58,7 @@ stages:
       - uses: deploy@v1
         with:
           environment: staging
-  
+
   - name: deploy-prod
     needs: [deploy-staging]
     approval:

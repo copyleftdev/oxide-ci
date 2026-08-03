@@ -21,7 +21,7 @@ Workflow for setting up the local development environment.
      echo "Waiting for PostgreSQL..."
      sleep 2
    done
-   
+
    # Wait for NATS
    until curl -s http://localhost:8222/healthz > /dev/null; do
      echo "Waiting for NATS..."
@@ -38,7 +38,7 @@ Workflow for setting up the local development environment.
    ```bash
    # Test PostgreSQL
    psql postgres://oxide:oxide@localhost:5432/oxide -c "SELECT 1"
-   
+
    # Test NATS
    curl http://localhost:8222/varz
    ```

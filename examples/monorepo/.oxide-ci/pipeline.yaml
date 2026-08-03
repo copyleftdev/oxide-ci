@@ -25,7 +25,7 @@ stages:
           # Compare with base branch
           CHANGED=$(git diff --name-only origin/main...HEAD)
           echo "changed=$CHANGED" >> $OXIDE_OUTPUT
-          
+
           # Set flags
           [[ "$CHANGED" == *"packages/api/"* ]] && echo "api=true" >> $OXIDE_OUTPUT
           [[ "$CHANGED" == *"packages/web/"* ]] && echo "web=true" >> $OXIDE_OUTPUT
@@ -49,7 +49,7 @@ stages:
   - name: api
     needs: [detect, shared]
     condition: |
-      steps.changes.outputs.api == 'true' || 
+      steps.changes.outputs.api == 'true' ||
       steps.changes.outputs.shared == 'true'
     steps:
       - name: install
@@ -71,7 +71,7 @@ stages:
   - name: web
     needs: [detect, shared]
     condition: |
-      steps.changes.outputs.web == 'true' || 
+      steps.changes.outputs.web == 'true' ||
       steps.changes.outputs.shared == 'true'
     steps:
       - name: install

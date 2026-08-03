@@ -102,21 +102,21 @@ stages:
           mkdir -p fuzz/corpus/fuzz_parse_user
           mkdir -p fuzz/corpus/fuzz_validate_email
           mkdir -p fuzz/corpus/fuzz_parse_config
-          
+
           # Seed corpus for user parsing
           echo '{"name":"test","age":25}' > fuzz/corpus/fuzz_parse_user/valid1
           echo '{"name":"","age":0}' > fuzz/corpus/fuzz_parse_user/valid2
           echo 'invalid json' > fuzz/corpus/fuzz_parse_user/invalid1
-          
+
           # Seed corpus for email validation
           echo 'user@example.com' > fuzz/corpus/fuzz_validate_email/valid1
           echo 'invalid' > fuzz/corpus/fuzz_validate_email/invalid1
           echo '' > fuzz/corpus/fuzz_validate_email/empty
-          
+
           # Seed corpus for config parsing
           echo 'key=value' > fuzz/corpus/fuzz_parse_config/valid1
           echo '# comment' > fuzz/corpus/fuzz_parse_config/comment
-          
+
           echo "Corpus initialized with seed inputs"
           find fuzz/corpus -type f | wc -l
           echo "seed files created"

@@ -51,7 +51,7 @@ Complete workflow for picking up, working through, and closing a GitHub issue.
    cargo fmt --check
    cargo clippy --workspace -- -D warnings
    cargo test --workspace
-   
+
    # If spec changes
    make lint
    ```
@@ -76,10 +76,10 @@ Complete workflow for picking up, working through, and closing a GitHub issue.
 
     ## Summary
     - [Brief description of what was implemented]
-    
+
     ## Commits
     - [List key commits]
-    
+
     ## Verification
     - All acceptance criteria met
     - Tests passing

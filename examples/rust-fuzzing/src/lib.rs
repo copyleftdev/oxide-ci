@@ -21,17 +21,17 @@ pub fn validate_email(email: &str) -> bool {
     if email.is_empty() || email.len() > 254 {
         return false;
     }
-    
+
     let parts: Vec<&str> = email.split('@').collect();
     if parts.len() != 2 {
         return false;
     }
-    
+
     let local = parts[0];
     let domain = parts[1];
-    
-    !local.is_empty() 
-        && !domain.is_empty() 
+
+    !local.is_empty()
+        && !domain.is_empty()
         && domain.contains('.')
         && !local.starts_with('.')
         && !local.ends_with('.')
@@ -47,21 +47,21 @@ pub fn calculate_checksum(data: &[u8]) -> u32 {
 /// Parse a simple key=value config format.
 pub fn parse_config(input: &str) -> Result<Vec<(String, String)>, ParseError> {
     let mut result = Vec::new();
-    
+
     for line in input.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        
+
         let parts: Vec<&str> = line.splitn(2, '=').collect();
         if parts.len() != 2 {
             return Err(ParseError::InvalidFormat(format!("Invalid line: {}", line)));
         }
-        
+
         result.push((parts[0].trim().to_string(), parts[1].trim().to_string()));
     }
-    
+
     Ok(result)
 }
 

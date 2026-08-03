@@ -13,5 +13,5 @@ if __name__ == "__main__":
     path = "docs/media/logo.png"
     if len(sys.argv) > 1:
         path = sys.argv[1]
-    
+
     main(path)

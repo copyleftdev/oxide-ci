@@ -25,7 +25,7 @@ stages:
     steps:
       - name: checkout
         plugin: oxide/checkout@v1
-      
+
       - name: build
         run: |
           echo "Building..."

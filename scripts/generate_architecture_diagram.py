@@ -16,7 +16,7 @@ graph_attr = {
 
 with Diagram("Oxide CI Architecture", show=False, filename="docs/media/architecture", graph_attr=graph_attr):
     user = User("Developer")
-    
+
     with Cluster("Control Plane"):
         api = Server("Oxide API")
         scheduler = Server("Oxide Scheduler")
@@ -26,16 +26,16 @@ with Diagram("Oxide CI Architecture", show=False, filename="docs/media/architect
         user >> Edge(label="CLI / UI") >> api
         api >> Edge(label="State") >> db
         api >> Edge(label="Events") >> bus
-        
+
         scheduler << Edge(label="Consume") << bus
         scheduler >> Edge(label="Read/Write") >> db
-        
+
     with Cluster("Execution Plane (Agents)"):
         with Cluster("Oxide Agent Node"):
             agent = Server("Agent")
             runner = Docker("Runner (Docker/Nix)")
             plugins = Rust("Native Plugins")
-            
+
             agent << Edge(label="Job Assign") << bus
             agent >> Edge(label="Logs/Status") >> bus
             agent >> runner

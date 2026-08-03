@@ -43,15 +43,15 @@ deploy (NixOS)
       let pkgs = nixpkgs.legacyPackages.${system};
       in {
         packages.default = pkgs.callPackage ./nix/package.nix {};
-        
+
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [ rustc cargo clippy ];
         };
-        
+
         devShells.ci = pkgs.mkShell {
           packages = with pkgs; [ rustc cargo nixpkgs-fmt ];
         };
-        
+
         packages.dockerImage = pkgs.dockerTools.buildImage {
           name = "myapp";
           config.Cmd = [ "${self.packages.${system}.default}/bin/myapp" ];

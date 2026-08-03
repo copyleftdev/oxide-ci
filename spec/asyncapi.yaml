@@ -5,7 +5,7 @@ info:
   version: 0.1.0
   description: |
     API-first CI/CD engine written in Rust.
-    
+
     ## Licensing
     This product uses Keygen for license management and Stripe for payments.
     All API access requires a valid license key.
@@ -48,7 +48,7 @@ channels:
     messages:
       runQueued:
         $ref: './messages/run.yaml#/RunQueued'
-  
+
   run-started:
     address: run.started.{pipeline_id}.{run_id}
     description: Emitted when a run begins
@@ -60,7 +60,7 @@ channels:
     messages:
       runStarted:
         $ref: './messages/run.yaml#/RunStarted'
-  
+
   run-completed:
     address: run.completed.{pipeline_id}.{run_id}
     description: Emitted when a run finishes

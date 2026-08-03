@@ -36,7 +36,7 @@ Steps are the unit of execution.
   plugin: git-checkout
   with:
     repository: ...
-  
+
   # OR run a command
   run: echo "Hello"
   shell: bash

@@ -250,7 +250,7 @@ impl Scheduler {
     /// Main scheduling loop
     pub async fn run(&self) -> Result<()> {
         let mut events = self.events.subscribe("trigger.*").await?;
-        
+
         while let Some(event) = events.next().await {
             match event {
                 Event::WebhookReceived(wh) => self.handle_webhook(wh).await?,
@@ -262,12 +262,12 @@ impl Scheduler {
         }
         Ok(())
     }
-    
+
     /// Build DAG and schedule ready stages
     async fn schedule_run(&self, run: Run) -> Result<()> {
         let dag = self.build_dag(&run.pipeline)?;
         let ready = dag.roots(); // Stages with no dependencies
-        
+
         for stage in ready {
             self.dispatch_stage(run.id, stage).await?;
         }
@@ -312,29 +312,29 @@ impl Agent {
     pub async fn run(&self) -> Result<()> {
         // 1. Register with scheduler
         self.register().await?;
-        
+
         // 2. Start heartbeat loop
         let heartbeat = self.spawn_heartbeat();
-        
+
         // 3. Listen for job assignments
         let jobs = self.events.subscribe(&format!("agent.{}.job", self.id)).await?;
-        
+
         while let Some(job) = jobs.next().await {
             // 4. Execute job
             let result = self.runner.execute(job).await;
-            
+
             // 5. Report result
             self.events.publish(Event::JobCompleted(result)).await?;
         }
-        
+
         heartbeat.abort();
         Ok(())
     }
-    
+
     async fn spawn_heartbeat(&self) -> JoinHandle<()> {
         let events = self.events.clone();
         let id = self.id;
-        
+
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(10));
             loop {
@@ -417,15 +417,15 @@ impl Runner {
         let span = self.tracer.span("step.execute")
             .attribute("step.name", &step.name)
             .start();
-        
+
         // 1. Restore cache
         if let Some(cache_cfg) = &ctx.cache {
             self.cache.restore(cache_cfg).await?;
         }
-        
+
         // 2. Inject secrets
         let env = self.secrets.resolve_all(&step.secrets).await?;
-        
+
         // 3. Execute
         let result = if let Some(plugin) = &step.plugin {
             self.plugins.execute(plugin, step.into()).await?
@@ -434,12 +434,12 @@ impl Runner {
         } else {
             return Err(Error::InvalidStep("no plugin or run command"));
         };
-        
+
         // 4. Save cache
         if let Some(cache_cfg) = &ctx.cache {
             self.cache.save(cache_cfg).await?;
         }
-        
+
         span.end();
         Ok(result)
     }
@@ -478,21 +478,21 @@ impl PluginHost {
         } else {
             std::fs::read(name)?
         };
-        
+
         let manifest = extism::Manifest::new([extism::Wasm::data(wasm)])
             .with_allowed_hosts(["*"])  // Configure per-plugin
             .with_memory_max(128 * 1024 * 1024);  // 128MB limit
-        
+
         let plugin = extism::Plugin::new(&manifest, [], true)?;
         self.plugins.insert(name.to_string(), Mutex::new(plugin));
         Ok(())
     }
-    
+
     /// Execute plugin function
     pub async fn call(&self, name: &str, input: &PluginInput) -> Result<PluginOutput> {
         let plugin = self.plugins.get(name)
             .ok_or(Error::PluginNotFound(name.to_string()))?;
-        
+
         let mut plugin = plugin.lock().await;
         let input_json = serde_json::to_vec(input)?;
         let output = plugin.call::<&[u8], &[u8]>("run", &input_json)?;
@@ -512,12 +512,12 @@ use oxide_plugin_sdk::*;
 pub fn run(input: Json<PluginInput>) -> FnResult<Json<PluginOutput>> {
     let repo = input.get_var("repository")?;
     let ref_ = input.get_var("ref").unwrap_or("HEAD".to_string());
-    
+
     // Clone repository
     let status = std::process::Command::new("git")
         .args(["clone", "--depth=1", "--branch", &ref_, &repo, "."])
         .status()?;
-    
+
     Ok(Json(PluginOutput {
         success: status.success(),
         outputs: HashMap::new(),
@@ -554,7 +554,7 @@ impl NatsEventBus {
     pub async fn connect(url: &str) -> Result<Self> {
         let client = async_nats::connect(url).await?;
         let jetstream = async_nats::jetstream::new(client.clone());
-        
+
         // Ensure streams exist
         jetstream.get_or_create_stream(async_nats::jetstream::stream::Config {
             name: "OXIDE_EVENTS".to_string(),
@@ -563,7 +563,7 @@ impl NatsEventBus {
             max_age: Duration::from_secs(86400 * 7),  // 7 days
             ..Default::default()
         }).await?;
-        
+
         Ok(Self { client, jetstream })
     }
 }
@@ -576,7 +576,7 @@ impl EventBus for NatsEventBus {
         self.jetstream.publish(subject, payload.into()).await?;
         Ok(())
     }
-    
+
     async fn subscribe(&self, pattern: &str) -> Result<EventStream> {
         let consumer = self.jetstream
             .create_consumer_on_stream(
@@ -587,7 +587,7 @@ impl EventBus for NatsEventBus {
                 "OXIDE_EVENTS",
             )
             .await?;
-        
+
         Ok(EventStream::new(consumer))
     }
 }
@@ -634,7 +634,7 @@ CREATE TABLE runs (
     completed_at TIMESTAMPTZ,
     duration_ms INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     UNIQUE(pipeline_id, run_number)
 );
 
@@ -685,7 +685,7 @@ CREATE TABLE secrets (
     encrypted_value BYTEA NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     UNIQUE(name, scope, scope_id)
 );
 
@@ -741,7 +741,7 @@ pub struct SecretManager {
 impl SecretManager {
     pub fn new(config: &SecretsConfig) -> Result<Self> {
         let mut providers: HashMap<String, Arc<dyn SecretProvider>> = HashMap::new();
-        
+
         if let Some(vault) = &config.vault {
             providers.insert("vault".into(), Arc::new(VaultProvider::new(vault)?));
         }
@@ -750,10 +750,10 @@ impl SecretManager {
             providers.insert("aws_ssm".into(), Arc::new(AwsSsmProvider::new(aws)?));
         }
         // ... other providers
-        
+
         Ok(Self { providers, native: NativeSecretStore::new()? })
     }
-    
+
     pub async fn resolve(&self, reference: &SecretReference) -> Result<String> {
         match &reference.source.provider {
             "oxide" => self.native.get(&reference.source.path).await,
@@ -807,9 +807,9 @@ impl KeygenClient {
             }))
             .send()
             .await?;
-        
+
         let result: KeygenResponse = resp.json().await?;
-        
+
         match result.meta.code {
             "VALID" => Ok(License::from(result.data)),
             "SUSPENDED" => Err(Error::LicenseSuspended),
@@ -817,7 +817,7 @@ impl KeygenClient {
             code => Err(Error::LicenseInvalid(code.to_string())),
         }
     }
-    
+
     /// Offline validation using signed license file
     pub fn validate_offline(&self, license_file: &[u8]) -> Result<License> {
         // Verify Ed25519 signature
@@ -854,12 +854,12 @@ impl BillingService {
     /// Report usage for metered billing
     pub async fn report_usage(&self, subscription_id: &str, quantity: i64) -> Result<()> {
         let subscription = stripe::Subscription::retrieve(&self.stripe, subscription_id, &[]).await?;
-        
+
         // Find metered subscription item
         let metered_item = subscription.items.data.iter()
             .find(|item| item.price.as_ref().map(|p| p.recurring.as_ref().map(|r| r.usage_type == Some(stripe::UsageType::Metered))).flatten().unwrap_or(false))
             .ok_or(Error::NoMeteredPlan)?;
-        
+
         stripe::UsageRecord::create(
             &self.stripe,
             &metered_item.id,
@@ -869,14 +869,14 @@ impl BillingService {
                 action: Some(stripe::UsageRecordAction::Increment),
             },
         ).await?;
-        
+
         Ok(())
     }
-    
+
     /// Handle Stripe webhooks
     pub async fn handle_webhook(&self, payload: &str, signature: &str) -> Result<()> {
         let event = stripe::Webhook::construct_event(payload, signature, &self.webhook_secret)?;
-        
+
         match event.type_ {
             stripe::EventType::InvoicePaymentFailed => {
                 // Suspend license
@@ -886,7 +886,7 @@ impl BillingService {
             }
             _ => {}
         }
-        
+
         Ok(())
     }
 }
@@ -1014,7 +1014,7 @@ cargo test --workspace
 # Run API server locally
 cargo run -p oxide-api
 
-# Run agent locally  
+# Run agent locally
 cargo run -p oxide-agent
 
 # Build release binaries

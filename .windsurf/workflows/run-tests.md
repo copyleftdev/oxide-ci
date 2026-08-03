@@ -32,7 +32,7 @@ Workflow for running the test suite.
    ```bash
    # Start dependencies
    docker compose -f docker-compose.dev.yaml up -d
-   
+
    # Run integration tests
    cargo test --workspace --features integration
    ```
