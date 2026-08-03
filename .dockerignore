@@ -1,0 +1,40 @@
+# Everything here is either enormous, machine-specific, or rebuilt inside the
+# image. Without this file the build context is tens of gigabytes — `target/`
+# alone is ~43 GB on a working checkout — and every `docker compose build`
+# ships all of it to the daemon before doing anything.
+
+# Rust build output
+target/
+
+# Node and Python environments
+node_modules/
+**/node_modules/
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+
+# Test and tooling artifacts
+**/.pytest_cache/
+**/.mypy_cache/
+**/.hypothesis/
+**/test-results/
+**/fuzz/artifacts/
+**/fuzz/corpus/
+.coverage
+
+# Generated docs
+docs/book/
+dist/
+wiki-export/
+
+# Version control and editor state
+.git/
+.github/
+.idea/
+.vscode/
+
+# Local configuration that must never bake into an image
+.env
+.env.*
+!.env.example

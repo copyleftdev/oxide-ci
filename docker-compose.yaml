@@ -13,8 +13,11 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # Deliberately no init script. The schema has exactly one source: the
+      # sqlx migrations in crates/oxide-db/migrations, applied by the API on
+      # start. Seeding here as well created tables the migrations then skipped
+      # as "already exists" before failing on columns that schema never had.
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U oxide"]
       interval: 5s
@@ -77,7 +80,8 @@ services:
   oxide-api:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile
+      target: api
     container_name: oxide-api
     environment:
       DATABASE_URL: postgres://oxide:${POSTGRES_PASSWORD:-oxide_dev_password}@postgres:5432/oxide
@@ -97,7 +101,8 @@ services:
   oxide-scheduler:
     build:
       context: .
-      dockerfile: Dockerfile.scheduler
+      dockerfile: Dockerfile
+      target: scheduler
     container_name: oxide-scheduler
     environment:
       DATABASE_URL: postgres://oxide:${POSTGRES_PASSWORD:-oxide_dev_password}@postgres:5432/oxide
@@ -109,16 +114,24 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
+      # The API applies the migrations; starting before it means querying
+      # tables that do not exist yet.
+      oxide-api:
+        condition: service_healthy
     networks:
       - oxide-net
 
   oxide-agent:
     build:
       context: .
-      dockerfile: Dockerfile.agent
+      dockerfile: Dockerfile
+      target: agent
     container_name: oxide-agent
     environment:
+      DATABASE_URL: postgres://oxide:${POSTGRES_PASSWORD:-oxide_dev_password}@postgres:5432/oxide
       NATS_URL: nats://nats:4222
+      AGENT_NAME: oxide-agent-1
+      AGENT_LABELS: linux,docker
       CACHE_URL: http://minio:9000
       CACHE_ACCESS_KEY: oxide
       CACHE_SECRET_KEY: ${MINIO_PASSWORD:-oxide_dev_password}
@@ -128,9 +141,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - agent_workspace:/var/oxide/workspace
     depends_on:
+      postgres:
+        condition: service_healthy
       nats:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      oxide-api:
         condition: service_healthy
     networks:
       - oxide-net

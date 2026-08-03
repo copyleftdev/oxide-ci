@@ -1,0 +1,25 @@
+[2m2026-08-03T20:55:44.817834Z[0m [32m INFO[0m [2moxide_agent[0m[2m:[0m Starting agent [3mname[0m[2m=[0mdev-agent [3mnats[0m[2m=[0mnats://localhost:54222 [3mworkspace[0m[2m=[0m/home/ops/Project/oxide-ci/.oxide-dev/workspace [3mmax_concurrent_jobs[0m[2m=[0m4
+[2m2026-08-03T20:55:44.847723Z[0m [32m INFO[0m [2moxide_nats::bus[0m[2m:[0m Connecting to NATS at nats://localhost:54222
+[2m2026-08-03T20:55:44.849952Z[0m [32m INFO[0m [2masync_nats[0m[2m:[0m event: connected
+[2m2026-08-03T20:55:44.850820Z[0m [32m INFO[0m [2moxide_nats::bus[0m[2m:[0m Connected to NATS and initialized JetStream
+[2m2026-08-03T20:55:44.850872Z[0m [32m INFO[0m [2moxide_agent::agent[0m[2m:[0m Starting build agent [3mname[0m[2m=[0mdev-agent
+[2m2026-08-03T20:55:44.854688Z[0m [32m INFO[0m [2moxide_agent::agent[0m[2m:[0m Agent registered [3magent_id[0m[2m=[0magt_019fc969-3bd2-7732-9285-a5614433f8c5 [3mname[0m[2m=[0mdev-agent
+[2m2026-08-03T20:55:44.854761Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to agent.registered
+[2m2026-08-03T20:55:44.855279Z[0m [32m INFO[0m [2moxide_agent::agent[0m[2m:[0m Agent started and ready for jobs [3magent_id[0m[2m=[0magt_019fc969-3bd2-7732-9285-a5614433f8c5
+[2m2026-08-03T20:55:44.855345Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Subscribing to pattern: agent.agt_019fc969-3bd2-7732-9285-a5614433f8c5.job.dispatched
+[2m2026-08-03T20:55:44.856526Z[0m [32m INFO[0m [2moxide_agent::agent[0m[2m:[0m Listening for dispatched jobs [3magent_id[0m[2m=[0magt_019fc969-3bd2-7732-9285-a5614433f8c5 [3msubject[0m[2m=[0magent.agt_019fc969-3bd2-7732-9285-a5614433f8c5.job.dispatched
+[2m2026-08-03T20:55:45.044059Z[0m [32m INFO[0m [2moxide_agent::heartbeat[0m[2m:[0m Starting heartbeat service [3magent_id[0m[2m=[0magt_019fc969-3bd2-7732-9285-a5614433f8c5 [3minterval_secs[0m[2m=[0m10
+[2m2026-08-03T20:55:45.061486Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to agent.agt_019fc969-3bd2-7732-9285-a5614433f8c5.heartbeat
+[2m2026-08-03T20:55:45.062189Z[0m [34mDEBUG[0m [2moxide_agent::heartbeat[0m[2m:[0m Heartbeat sent [3magent_id[0m[2m=[0magt_019fc969-3bd2-7732-9285-a5614433f8c5
+[2m2026-08-03T20:55:49.722710Z[0m [32m INFO[0m [2moxide_agent::agent[0m[2m:[0m Accepted job [3mjob_id[0m[2m=[0mjob_019fc969-4eba-7702-b511-adb0c18f755d [3mrun_id[0m[2m=[0mrun_019fc969-4dc3-7d41-9f32-92be98583032 [3mstage[0m[2m=[0mbuild [3msteps[0m[2m=[0m1 [3mqueue_wait_ms[0m[2m=[0m241
+[2m2026-08-03T20:55:49.722808Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to run.run_019fc969-4dc3-7d41-9f32-92be98583032.job.accepted
+[2m2026-08-03T20:55:49.723370Z[0m [32m INFO[0m [2moxide_agent::executor[0m[2m:[0m Starting job execution [3mrun_id[0m[2m=[0mrun_019fc969-4dc3-7d41-9f32-92be98583032 [3mstage[0m[2m=[0mbuild
+[2m2026-08-03T20:55:49.723608Z[0m [32m INFO[0m [2moxide_agent::executor[0m[2m:[0m Workspace created [3mpath[0m[2m=[0m/home/ops/Project/oxide-ci/.oxide-dev/workspace/run_019fc969-4dc3-7d41-9f32-92be98583032/build
+[2m2026-08-03T20:55:49.723657Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to run.run_019fc969-4dc3-7d41-9f32-92be98583032.stage.build.started
+[2m2026-08-03T20:55:49.723971Z[0m [32m INFO[0m [2moxide_agent::executor[0m[2m:[0m Executing step [3mrun_id[0m[2m=[0mrun_019fc969-4dc3-7d41-9f32-92be98583032 [3mstep[0m[2m=[0mgreet [3mindex[0m[2m=[0m0
+[2m2026-08-03T20:55:49.727247Z[0m [32m INFO[0m [2moxide_agent::executor[0m[2m:[0m Step completed successfully [3mstep[0m[2m=[0mgreet
+[2m2026-08-03T20:55:49.727299Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to run.run_019fc969-4dc3-7d41-9f32-92be98583032.stage.build.completed
+[2m2026-08-03T20:55:49.727925Z[0m [32m INFO[0m [2moxide_agent::agent[0m[2m:[0m Job finished [3mjob_id[0m[2m=[0mjob_019fc969-4eba-7702-b511-adb0c18f755d [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m3
+[2m2026-08-03T20:55:54.873393Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to agent.agt_019fc969-3bd2-7732-9285-a5614433f8c5.heartbeat
+[2m2026-08-03T20:55:54.873932Z[0m [34mDEBUG[0m [2moxide_agent::heartbeat[0m[2m:[0m Heartbeat sent [3magent_id[0m[2m=[0magt_019fc969-3bd2-7732-9285-a5614433f8c5
+[2m2026-08-03T20:56:02.265422Z[0m [32m INFO[0m [2moxide_agent[0m[2m:[0m Shutting down

@@ -1,0 +1,14 @@
+[2m2026-08-03T20:55:44.879639Z[0m [32m INFO[0m [2moxide_scheduler[0m[2m:[0m Database ready
+[2m2026-08-03T20:55:44.879731Z[0m [32m INFO[0m [2moxide_nats::bus[0m[2m:[0m Connecting to NATS at nats://localhost:54222
+[2m2026-08-03T20:55:44.881978Z[0m [32m INFO[0m [2masync_nats[0m[2m:[0m event: connected
+[2m2026-08-03T20:55:44.882661Z[0m [32m INFO[0m [2moxide_nats::bus[0m[2m:[0m Connected to NATS and initialized JetStream
+[2m2026-08-03T20:55:44.882698Z[0m [32m INFO[0m [2moxide_scheduler[0m[2m:[0m Event bus ready
+[2m2026-08-03T20:55:44.882722Z[0m [32m INFO[0m [2moxide_scheduler::service[0m[2m:[0m Scheduler service started [3mpoll_interval_ms[0m[2m=[0m300
+[2m2026-08-03T20:55:44.882740Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Subscribing to pattern: run.queued.*
+[2m2026-08-03T20:55:44.883701Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Subscribing to pattern: run.*.job.rejected
+[2m2026-08-03T20:55:44.884799Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Subscribing to pattern: run.*.stage.*.completed
+[2m2026-08-03T20:55:49.449486Z[0m [32m INFO[0m [2moxide_scheduler::service[0m[2m:[0m Adopted run; queueing ready stages [3mrun_id[0m[2m=[0mrun_019fc969-4dc3-7d41-9f32-92be98583032 [3mpipeline[0m[2m=[0msmoke-1785790549
+[2m2026-08-03T20:55:49.721674Z[0m [34mDEBUG[0m [2moxide_scheduler::service[0m[2m:[0m Dispatching [3mjob_id[0m[2m=[0mjob_019fc969-4eba-7702-b511-adb0c18f755d [3magent[0m[2m=[0mdev-agent [3mstage[0m[2m=[0mbuild [3mqueue_wait_ms[0m[2m=[0m241
+[2m2026-08-03T20:55:49.721795Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to agent.agt_019fc969-3bd2-7732-9285-a5614433f8c5.job.dispatched
+[2m2026-08-03T20:56:02.269279Z[0m [32m INFO[0m [2moxide_scheduler::service[0m[2m:[0m Scheduler service stopping
+[2m2026-08-03T20:56:02.269435Z[0m [32m INFO[0m [2moxide_scheduler[0m[2m:[0m Scheduler stopped

@@ -9,4 +9,5 @@
     - [System Diagrams](diagrams.md)
     - [Plugin System](plugins.md)
     - [Crate Ecosystem](crates.md)
+- [Local Development](development.md)
 - [Testing Strategy](testing.md)

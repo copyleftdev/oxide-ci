@@ -1,0 +1,11 @@
+[2m2026-08-03T20:55:43.486480Z[0m [32m INFO[0m [2moxide_api[0m[2m:[0m Connecting to services [3mnats_url[0m[2m=[0mnats://localhost:54222
+[2m2026-08-03T20:55:43.633375Z[0m [32m INFO[0m [2moxide_api[0m[2m:[0m Database ready
+[2m2026-08-03T20:55:43.633421Z[0m [32m INFO[0m [2moxide_nats::bus[0m[2m:[0m Connecting to NATS at nats://localhost:54222
+[2m2026-08-03T20:55:43.635964Z[0m [32m INFO[0m [2masync_nats[0m[2m:[0m event: connected
+[2m2026-08-03T20:55:43.638049Z[0m [32m INFO[0m [2moxide_nats::bus[0m[2m:[0m Connected to NATS and initialized JetStream
+[2m2026-08-03T20:55:43.638080Z[0m [32m INFO[0m [2moxide_api[0m[2m:[0m Event bus ready
+[2m2026-08-03T20:55:43.638711Z[0m [32m INFO[0m [2moxide_api[0m[2m:[0m API listening [3maddr[0m[2m=[0m0.0.0.0:18080
+[2m2026-08-03T20:55:49.445989Z[0m [34mDEBUG[0m [2moxide_nats::bus[0m[2m:[0m Publishing event to run.queued.pip_1bb75760-09fe-4545-9229-ed242fe80a0f
+[2m2026-08-03T20:56:02.273037Z[0m [32m INFO[0m [2moxide_api[0m[2m:[0m Received SIGTERM, shutting down
+[2m2026-08-03T20:56:02.273258Z[0m [32m INFO[0m [2moxide_api[0m[2m:[0m API stopped
+[2m2026-08-03T20:56:02.273355Z[0m [32m INFO[0m [2masync_nats[0m[2m:[0m event: closed
