@@ -15,7 +15,7 @@ stages:
     parallel: true
     steps:
       - name: Unit Tests
-        run: cargo test --workspace --lib
+        run: cargo test --workspace --lib --bins
 
       # Integration tests require Docker/Services usually.
       # If running locally on host, it might work if host has Docker.

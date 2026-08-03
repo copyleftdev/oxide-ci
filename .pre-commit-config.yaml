@@ -28,7 +28,7 @@ repos:
 
       - id: cargo-test
         name: cargo test
-        entry: cargo test --workspace --lib
+        entry: cargo test --workspace --lib --bins
         language: system
         types: [rust]
         pass_filenames: false

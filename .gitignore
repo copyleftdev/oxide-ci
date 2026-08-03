@@ -11,6 +11,9 @@ Cargo.lock
 .vscode/
 *.swp
 
+# Claude Code — share .claude/, keep personal overrides local
+.claude/settings.local.json
+
 # OS
 .DS_Store
 

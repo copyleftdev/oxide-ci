@@ -1,6 +1,6 @@
 # Oxide CI - AsyncAPI Development Commands
 
-.PHONY: help lint validate bundle docs clean setup check fmt test
+.PHONY: help lint validate bundle docs clean setup check fmt test verify
 
 help: ## Display this help message
 	@(which chafa >/dev/null && chafa docs/media/logo.png --size=40x20) || (.venv/bin/python scripts/generate_ascii_logo.py 2>/dev/null) || (python3 scripts/generate_ascii_logo.py 2>/dev/null) || echo "Oxide CI"
@@ -61,13 +61,18 @@ fmt:
 	cargo fmt --all
 
 test:
-	cargo test --workspace --lib
+	cargo test --workspace --lib --bins
 
 test-integration:
 	cargo test -p oxide-tests --features integration
 
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
+
+# Full verification gate: fmt + clippy + tests, stamps the ledger the
+# Claude Code Stop hook checks. Pass ARGS="--spec" to also validate AsyncAPI.
+verify: ## Run the full verification gate (fmt, clippy, tests)
+	@./scripts/verify.sh $(ARGS)
 
 # Run all pre-commit checks
 precommit:
