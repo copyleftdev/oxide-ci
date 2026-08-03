@@ -122,6 +122,15 @@ silently skips every test in it.
 - Test the error path, not only the happy path. A test that can only pass is
   not evidence.
 - Fixtures that a test generates belong in a tempdir, not in the repository.
+- **Pin container tags.** `latest` in a fixture is exactly the non-determinism
+  this strategy exists to prevent. The MinIO container was pinned to `latest`
+  and drifted onto a release that moved its startup banner from stdout to
+  stderr; the testcontainers wait strategy watches stdout, so every test using
+  the full context died on a sixty-second startup timeout with no hint as to why.
+- **Let the repository assign identity.** `create()` returns the entity it
+  stored, with the id it chose. Tests that keep using a fixture's id read back
+  nothing and violate foreign keys — which is how a whole tier of this suite sat
+  red.
 
 ## See also
 

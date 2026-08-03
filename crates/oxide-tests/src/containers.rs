@@ -70,7 +70,13 @@ pub struct MinioContainer {
 
 impl MinioContainer {
     pub async fn start() -> anyhow::Result<Self> {
-        let container = MinIO::default().with_tag("latest").start().await?;
+        // Deliberately not `latest`. The testcontainers module waits for "API:"
+        // on stdout, and current MinIO releases print their startup banner to
+        // stderr instead — so `latest` drifted onto a release the wait strategy
+        // can never match, and every test using the full context died on a
+        // 60-second startup timeout. The module's own pinned tag is known to
+        // match it. Postgres and NATS are pinned here for the same reason.
+        let container = MinIO::default().start().await?;
 
         let host = container.get_host().await?;
         let port = container.get_host_port_ipv4(9000).await?;

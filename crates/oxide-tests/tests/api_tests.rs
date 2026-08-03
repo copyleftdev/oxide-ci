@@ -42,7 +42,14 @@ async fn test_list_pipelines_empty() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
-    assert!(body.as_array().map(|a| a.is_empty()).unwrap_or(false));
+    // The endpoint returns ListPipelinesResponse: { pipelines: [...], total }.
+    assert_eq!(body["total"], 0);
+    assert!(
+        body["pipelines"]
+            .as_array()
+            .expect("pipelines array")
+            .is_empty()
+    );
 }
 
 #[tokio::test]
@@ -58,7 +65,7 @@ async fn test_create_pipeline() {
     let pipeline = PipelineFixture::simple();
 
     let resp = client
-        .post("/api/v1/pipelines", &pipeline)
+        .post("/api/v1/pipelines", &pipeline.definition)
         .await
         .expect("Request failed");
 
@@ -93,9 +100,17 @@ async fn test_list_runs_empty() {
         .expect("Failed to start server");
 
     let client = ApiTestClient::new(addr);
-    let resp = client.get("/api/v1/runs").await.expect("Request failed");
+    // Runs are nested under their pipeline — there is no top-level
+    // /api/v1/runs collection in the router.
+    let pipeline_id = uuid::Uuid::new_v4();
+    let resp = client
+        .get(&format!("/api/v1/pipelines/{pipeline_id}/runs"))
+        .await
+        .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    assert_eq!(body["total"], 0);
 }
 
 #[tokio::test]

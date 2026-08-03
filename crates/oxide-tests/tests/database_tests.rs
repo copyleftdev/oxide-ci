@@ -19,9 +19,11 @@ async fn test_pipeline_crud() {
 
     let repo = PgPipelineRepository::new(ctx.db.pool().clone());
 
-    // Create
-    let pipeline = PipelineFixture::simple();
-    repo.create(&pipeline.definition)
+    // Create. The repository assigns the id, so the returned entity — not the
+    // fixture — is what every later lookup must use.
+    let fixture = PipelineFixture::simple();
+    let pipeline = repo
+        .create(&fixture.definition)
         .await
         .expect("Failed to create pipeline");
 
@@ -55,9 +57,9 @@ async fn test_pipeline_list_pagination() {
 
     // Create multiple pipelines
     for i in 0..5 {
-        let mut pipeline = PipelineFixture::simple();
-        pipeline.name = format!("pipeline-{}", i);
-        repo.create(&pipeline.definition)
+        let mut fixture = PipelineFixture::simple();
+        fixture.definition.name = format!("pipeline-{}", i);
+        repo.create(&fixture.definition)
             .await
             .expect("Failed to create pipeline");
     }
@@ -82,10 +84,11 @@ async fn test_run_crud() {
     let pipeline_repo = PgPipelineRepository::new(ctx.db.pool().clone());
     let run_repo = PgRunRepository::new(ctx.db.pool().clone());
 
-    // Create pipeline first
-    let pipeline = PipelineFixture::simple();
-    pipeline_repo
-        .create(&pipeline.definition)
+    // Create pipeline first. The run's foreign key must point at the id the
+    // repository assigned, not at the fixture's.
+    let fixture = PipelineFixture::simple();
+    let pipeline = pipeline_repo
+        .create(&fixture.definition)
         .await
         .expect("Failed to create pipeline");
 
@@ -119,8 +122,8 @@ async fn test_run_status_update() {
     let run_repo = PgRunRepository::new(ctx.db.pool().clone());
 
     // Setup
-    let pipeline = PipelineFixture::simple();
-    pipeline_repo.create(&pipeline.definition).await.unwrap();
+    let fixture = PipelineFixture::simple();
+    let pipeline = pipeline_repo.create(&fixture.definition).await.unwrap();
 
     let mut run = RunFixture::queued(&pipeline);
     run_repo.create(&run).await.unwrap();
@@ -149,9 +152,9 @@ async fn test_concurrent_writes() {
         .map(|i| {
             let repo = repo.clone();
             tokio::spawn(async move {
-                let mut pipeline = PipelineFixture::simple();
-                pipeline.name = format!("concurrent-{}", i);
-                repo.create(&pipeline.definition).await
+                let mut fixture = PipelineFixture::simple();
+                fixture.definition.name = format!("concurrent-{}", i);
+                repo.create(&fixture.definition).await
             })
         })
         .collect();
