@@ -1,10 +1,9 @@
 # Architecture
 
-![Architecture](media/architecture.png)
-
-For the crate topology, execution flow, plugin resolution, and secret handling as
-diagrams, see [System Diagrams](diagrams.md). For how the tiers of the test suite
-fit together, see [Testing Strategy](testing.md).
+The crate topology, both execution paths, plugin resolution, and secret handling
+are drawn in [System Diagrams](diagrams.md); the test tiers in
+[Testing Strategy](testing.md). They are kept there rather than duplicated here
+so there is one drawing of each thing to keep current.
 
 Oxide CI is composed of several modular crates.
 
