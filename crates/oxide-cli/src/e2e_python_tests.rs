@@ -19,8 +19,8 @@
 //! cover what is specific to their toolchain.
 
 use crate::e2e_support::{
-    PY_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, ensure_image,
-    require_docker, run_pipeline,
+    PY_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, require_docker,
+    run_pipeline,
 };
 use std::fs;
 use std::path::Path;
@@ -87,7 +87,6 @@ if __name__ == "__main__":
 #[test]
 fn python_pipeline_passes_in_a_container() {
     require_docker();
-    ensure_image(PY_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_python_project(workspace.path(), true);
@@ -117,7 +116,6 @@ stages:
 #[test]
 fn failing_python_tests_fail_the_pipeline_and_stop_it() {
     require_docker();
-    ensure_image(PY_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_python_project(workspace.path(), false);
@@ -147,7 +145,6 @@ stages:
 #[test]
 fn parallel_steps_overlap_in_wall_clock() {
     require_docker();
-    ensure_image(PY_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_python_project(workspace.path(), true);
@@ -188,7 +185,6 @@ stages:
 #[test]
 fn workspace_is_visible_inside_the_container() {
     require_docker();
-    ensure_image(PY_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_python_project(workspace.path(), true);
@@ -229,7 +225,6 @@ stages:
 #[ignore = "canary: requires network and PyPI; run on a schedule, never as a gate"]
 fn canary_python_pipeline_with_real_dependencies() {
     require_docker();
-    ensure_image(PY_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_python_project(workspace.path(), true);

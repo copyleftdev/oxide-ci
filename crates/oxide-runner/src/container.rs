@@ -3,10 +3,12 @@
 use crate::runner::{OutputLine, OutputStream, RunnerConfig, StepContext, StepResult, StepRunner};
 use async_trait::async_trait;
 use bollard::Docker;
+use bollard::auth::DockerCredentials;
 use bollard::container::{
     Config, CreateContainerOptions, LogOutput, LogsOptions, RemoveContainerOptions,
     StartContainerOptions, WaitContainerOptions,
 };
+use bollard::image::CreateImageOptions;
 use futures::StreamExt;
 use oxide_core::Result;
 use oxide_core::pipeline::StepDefinition;
@@ -14,6 +16,24 @@ use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::time::{Duration, timeout};
 use tracing::{debug, error, info, warn};
+
+/// Split an image reference into the name and tag Docker's pull API expects.
+///
+/// The naive `rfind(':')` is wrong twice over: a registry port (`reg:5000/img`)
+/// puts a colon before the path, and a digest (`img@sha256:...`) puts one after
+/// it. Both must resolve to "no tag".
+fn split_image_reference(image: &str) -> (String, String) {
+    if image.contains('@') {
+        // Digest-pinned: Docker takes the whole reference and no tag.
+        return (image.to_string(), String::new());
+    }
+    match image.rfind(':') {
+        Some(index) if !image[index..].contains('/') => {
+            (image[..index].to_string(), image[index + 1..].to_string())
+        }
+        _ => (image.to_string(), "latest".to_string()),
+    }
+}
 
 /// Container runner for executing commands in Docker containers.
 pub struct ContainerRunner {
@@ -36,15 +56,77 @@ impl ContainerRunner {
         Self { docker, config }
     }
 
+    /// Pull `image` unless it is already present locally.
+    ///
+    /// Docker will not fetch an image on container creation, so without this a
+    /// pipeline fails on any host with a cold image cache — a fresh agent, a
+    /// new contributor, a clean CI runner (#51).
+    async fn ensure_image(
+        &self,
+        image: &str,
+        credentials: Option<DockerCredentials>,
+        output_tx: &mpsc::Sender<OutputLine>,
+    ) -> Result<()> {
+        if self.docker.inspect_image(image).await.is_ok() {
+            debug!(image = %image, "Image already present");
+            return Ok(());
+        }
+
+        let (from_image, tag) = split_image_reference(image);
+        info!(image = %image, "Pulling image");
+
+        let options = CreateImageOptions {
+            from_image: from_image.as_str(),
+            tag: tag.as_str(),
+            ..Default::default()
+        };
+
+        let mut stream = self.docker.create_image(Some(options), None, credentials);
+        let mut line_number = 0u32;
+
+        while let Some(update) = stream.next().await {
+            match update {
+                Ok(info) => {
+                    // Layer-level progress carries an id and would flood the
+                    // log; the id-less entries are the milestones a human
+                    // wants ("Pulling from ...", "Downloaded newer image").
+                    if let (Some(status), None) = (info.status.as_ref(), info.id.as_ref()) {
+                        line_number += 1;
+                        let _ = output_tx
+                            .send(OutputLine {
+                                stream: OutputStream::Stdout,
+                                content: format!("{}: {}", image, status),
+                                line_number,
+                                timestamp: chrono::Utc::now(),
+                            })
+                            .await;
+                    }
+                }
+                Err(e) => {
+                    return Err(oxide_core::Error::Internal(format!(
+                        "Failed to pull image `{}`: {}",
+                        image, e
+                    )));
+                }
+            }
+        }
+
+        info!(image = %image, "Image pulled");
+        Ok(())
+    }
+
     async fn execute_in_container(
         &self,
         image: &str,
         command: &str,
         ctx: &StepContext,
+        credentials: Option<DockerCredentials>,
         output_tx: mpsc::Sender<OutputLine>,
     ) -> Result<StepResult> {
         let start = std::time::Instant::now();
         let container_name = format!("oxide-{}", uuid::Uuid::new_v4());
+
+        self.ensure_image(image, credentials, &output_tx).await?;
 
         info!(
             image = %image,
@@ -261,6 +343,25 @@ impl StepRunner for ContainerRunner {
             .as_ref()
             .ok_or_else(|| oxide_core::Error::Internal("No command to run".to_string()))?;
 
+        // Registry credentials, if the step configured a private registry.
+        // `password_secret` names a secret rather than holding one, so it is
+        // resolved against the step's secrets.
+        let credentials = ctx
+            .step
+            .environment
+            .as_ref()
+            .and_then(|env| env.container.as_ref())
+            .and_then(|container| container.registry.as_ref())
+            .map(|auth| DockerCredentials {
+                username: auth.username.clone(),
+                password: auth
+                    .password_secret
+                    .as_ref()
+                    .and_then(|name| ctx.secrets.get(name).cloned()),
+                serveraddress: auth.url.clone(),
+                ..Default::default()
+            });
+
         // Get image from step variables or use default
         // Get image from step configuration or variables
         let image = if let Some(env) = &ctx.step.environment {
@@ -290,7 +391,7 @@ impl StepRunner for ContainerRunner {
             }
 
             match self
-                .execute_in_container(&image, command, ctx, output_tx.clone())
+                .execute_in_container(&image, command, ctx, credentials.clone(), output_tx.clone())
                 .await
             {
                 Ok(result) if result.success => return Ok(result),
@@ -327,5 +428,55 @@ impl StepRunner for ContainerRunner {
         // pipeline.rs says: `env_type: EnvironmentType`
 
         step.variables.contains_key("OXIDE_CONTAINER_IMAGE")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_image_reference;
+
+    #[test]
+    fn splits_a_plain_tag() {
+        assert_eq!(
+            split_image_reference("python:3.12-slim"),
+            ("python".to_string(), "3.12-slim".to_string())
+        );
+    }
+
+    #[test]
+    fn defaults_to_latest_when_no_tag_is_given() {
+        assert_eq!(
+            split_image_reference("alpine"),
+            ("alpine".to_string(), "latest".to_string())
+        );
+    }
+
+    #[test]
+    fn keeps_namespaced_images_intact() {
+        assert_eq!(
+            split_image_reference("ghcr.io/owner/image:v2"),
+            ("ghcr.io/owner/image".to_string(), "v2".to_string())
+        );
+    }
+
+    #[test]
+    fn a_registry_port_is_not_a_tag() {
+        // The colon here belongs to the port, not to a tag.
+        assert_eq!(
+            split_image_reference("registry.local:5000/team/app"),
+            (
+                "registry.local:5000/team/app".to_string(),
+                "latest".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn a_digest_is_not_a_tag() {
+        let digest = "python@sha256:0123456789abcdef";
+        assert_eq!(
+            split_image_reference(digest),
+            (digest.to_string(), String::new())
+        );
     }
 }

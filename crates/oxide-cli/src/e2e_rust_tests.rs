@@ -14,8 +14,8 @@
 //! turn the gate red.
 
 use crate::e2e_support::{
-    RUST_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, ensure_image,
-    require_docker, run_pipeline, stage,
+    RUST_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, require_docker,
+    run_pipeline, stage,
 };
 use std::fs;
 use std::path::Path;
@@ -108,7 +108,6 @@ mod tests {{
 #[test]
 fn rust_pipeline_passes_in_a_container() {
     require_docker();
-    ensure_image(RUST_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_rust_project(workspace.path(), RustFixture::Passing);
@@ -141,7 +140,6 @@ stages:
 #[test]
 fn failing_rust_tests_fail_the_pipeline_and_stop_it() {
     require_docker();
-    ensure_image(RUST_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_rust_project(workspace.path(), RustFixture::FailingTests);
@@ -171,7 +169,6 @@ stages:
 #[test]
 fn a_build_failure_is_attributed_to_the_build_stage() {
     require_docker();
-    ensure_image(RUST_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_rust_project(workspace.path(), RustFixture::BrokenBuild);
@@ -208,7 +205,6 @@ stages:
 #[ignore = "canary: requires network and crates.io; run on a schedule, never as a gate"]
 fn canary_rust_pipeline_with_real_dependencies() {
     require_docker();
-    ensure_image(RUST_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_rust_project(workspace.path(), RustFixture::Passing);

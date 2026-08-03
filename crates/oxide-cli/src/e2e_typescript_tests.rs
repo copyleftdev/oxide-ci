@@ -13,8 +13,8 @@
 //! canary tier, where it belongs.
 
 use crate::e2e_support::{
-    NODE_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, ensure_image,
-    require_docker, run_pipeline,
+    NODE_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, require_docker,
+    run_pipeline,
 };
 use std::fs;
 use std::path::Path;
@@ -87,7 +87,6 @@ test('divide by zero throws', () => {{
 #[test]
 fn typescript_pipeline_passes_in_a_container() {
     require_docker();
-    ensure_image(NODE_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_typescript_project(workspace.path(), true);
@@ -123,7 +122,6 @@ stages:
 #[test]
 fn failing_typescript_tests_fail_the_pipeline_and_stop_it() {
     require_docker();
-    ensure_image(NODE_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_typescript_project(workspace.path(), false);
@@ -158,7 +156,6 @@ stages:
 #[ignore = "canary: requires network and npm; run on a schedule, never as a gate"]
 fn canary_typescript_pipeline_with_real_toolchain() {
     require_docker();
-    ensure_image(NODE_IMAGE);
 
     let workspace = TempDir::new().unwrap();
     write_typescript_project(workspace.path(), true);

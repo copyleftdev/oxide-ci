@@ -36,30 +36,6 @@ pub fn require_docker() {
     );
 }
 
-/// Pull an image before the pipeline runs.
-///
-/// The engine does not do this itself — see issue #51. `oxide-runner` creates
-/// and starts containers but never calls Docker's image-create endpoint, so a
-/// missing image surfaces as a container-creation error rather than a pull.
-/// Until #51 is fixed the harness pre-pulls, so these tests measure pipeline
-/// behavior instead of image-cache state. Delete this when #51 lands.
-pub fn ensure_image(image: &str) {
-    let present = Command::new("docker")
-        .args(["image", "inspect", image])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if present {
-        return;
-    }
-    let pulled = Command::new("docker")
-        .args(["pull", "--quiet", image])
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false);
-    assert!(pulled, "failed to pull {image}");
-}
-
 /// A step that runs `command` inside `image`.
 ///
 /// The command goes in a block scalar so quoting inside it never has to be
