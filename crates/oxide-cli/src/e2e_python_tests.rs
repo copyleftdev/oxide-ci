@@ -14,62 +14,17 @@
 //! * **Canary (`#[ignore]`)** — the same shape with real dependency installs
 //!   over the network. Informative, never blocking. Run it on a schedule.
 //!
-//! ```text
-//! cargo test -p oxide-cli --features e2e -- --test-threads=1
-//! cargo test -p oxide-cli --features e2e -- --ignored          # canary
-//! ```
-//!
-//! Requires a Docker daemon. The feature flag is the opt-in, so a missing
-//! daemon fails loudly rather than passing vacuously.
+//! The engine-level behaviors — parallel overlap, the workspace bind mount —
+//! are asserted here once rather than repeated per ecosystem; the other slices
+//! cover what is specific to their toolchain.
 
-use crate::executor::{ExecutorConfig, PipelineResult, execute_pipeline};
-use oxide_core::pipeline::PipelineDefinition;
-use std::collections::HashMap;
+use crate::e2e_support::{
+    PY_IMAGE, assert_pipeline_failed_at, assert_pipeline_passed, container_step, ensure_image,
+    require_docker, run_pipeline,
+};
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 use tempfile::TempDir;
-
-const PY_IMAGE: &str = "python:3.12-slim";
-
-// ---------------------------------------------------------------- harness --
-
-fn require_docker() {
-    let ok = Command::new("docker")
-        .args(["info", "--format", "{{.ServerVersion}}"])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    assert!(
-        ok,
-        "these tests need a running Docker daemon; they are behind the `e2e` feature so this is a \
-         real failure, not a reason to skip"
-    );
-}
-
-/// Pull an image before the pipeline runs.
-///
-/// The engine does not do this itself: `crates/oxide-runner/src/container.rs`
-/// creates and starts containers but never calls Docker's image-create
-/// endpoint, so a missing image surfaces as a container-creation error rather
-/// than a pull. Until that is fixed, the harness pre-pulls so these tests
-/// measure pipeline behavior instead of image-cache state.
-fn ensure_image(image: &str) {
-    let present = Command::new("docker")
-        .args(["image", "inspect", image])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if present {
-        return;
-    }
-    let pulled = Command::new("docker")
-        .args(["pull", "--quiet", image])
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false);
-    assert!(pulled, "failed to pull {image}");
-}
 
 /// Write a small, dependency-free Python library and its tests.
 ///
@@ -127,62 +82,6 @@ if __name__ == "__main__":
     .unwrap();
 }
 
-/// A step that runs `command` inside the Python image.
-///
-/// The command goes in a block scalar so quoting inside it never has to be
-/// escaped for YAML.
-fn container_step(name: &str, command: &str) -> String {
-    format!(
-        r#"      - name: {name}
-        run: |
-          {command}
-        environment:
-          type: container
-          container:
-            image: {PY_IMAGE}
-"#
-    )
-}
-
-fn run_pipeline(yaml: &str, workspace: &Path) -> PipelineResult {
-    let definition: PipelineDefinition =
-        serde_yaml::from_str(yaml).expect("pipeline fixture should parse");
-    let config = ExecutorConfig {
-        workspace: workspace.to_path_buf(),
-        variables: HashMap::new(),
-        secrets: HashMap::new(),
-        verbose: false,
-    };
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(execute_pipeline(&definition, &config, None))
-        .expect("executor should return a result, even for a failing pipeline")
-}
-
-fn stage_names(result: &PipelineResult) -> Vec<&str> {
-    result
-        .stages
-        .iter()
-        .map(|(name, _)| name.as_str())
-        .collect()
-}
-
-fn stage<'a>(result: &'a PipelineResult, name: &str) -> &'a crate::executor::StageResult {
-    result
-        .stages
-        .iter()
-        .find(|(stage_name, _)| stage_name == name)
-        .map(|(_, stage)| stage)
-        .unwrap_or_else(|| {
-            panic!(
-                "stage `{name}` did not run; stages were {:?}",
-                stage_names(result)
-            )
-        })
-}
-
 // ------------------------------------------------------------ hermetic tier --
 
 #[test]
@@ -203,27 +102,16 @@ stages:
     depends_on: [compile]
     steps:
 {}"#,
-        container_step("byte-compile", "python -m compileall -q src"),
-        container_step("unit-tests", "python -m unittest discover -s tests -v"),
+        container_step("byte-compile", PY_IMAGE, "python -m compileall -q src"),
+        container_step(
+            "unit-tests",
+            PY_IMAGE,
+            "python -m unittest discover -s tests -v"
+        ),
     );
 
     let result = run_pipeline(&yaml, workspace.path());
-
-    assert!(
-        result.success,
-        "pipeline should pass: {:?}",
-        stage_names(&result)
-    );
-    // The DAG was declared compile -> test; prove the engine honored it rather
-    // than merely accepting the declaration.
-    assert_eq!(stage_names(&result), vec!["compile", "test"]);
-    for (name, stage) in &result.stages {
-        assert!(stage.success, "stage `{name}` should have passed");
-        for (step_name, step) in &stage.steps {
-            assert!(step.success, "step `{step_name}` should have passed");
-            assert_eq!(step.exit_code, 0, "step `{step_name}` exit code");
-        }
-    }
+    assert_pipeline_passed(&result, &["compile", "test"]);
 }
 
 #[test]
@@ -244,36 +132,16 @@ stages:
     depends_on: [test]
     steps:
 {}"#,
-        container_step("unit-tests", "python -m unittest discover -s tests"),
-        container_step("build-sdist", "python -c \"print('packaged')\""),
+        container_step(
+            "unit-tests",
+            PY_IMAGE,
+            "python -m unittest discover -s tests"
+        ),
+        container_step("build-sdist", PY_IMAGE, "python -c \"print('packaged')\""),
     );
 
     let result = run_pipeline(&yaml, workspace.path());
-
-    // A green pipeline over red tests is the worst failure a CI engine can
-    // have, so this assertion matters more than the happy path.
-    assert!(
-        !result.success,
-        "pipeline must fail when the test suite fails"
-    );
-
-    let test_stage = stage(&result, "test");
-    assert!(!test_stage.success, "the test stage must be marked failed");
-    let (_, failing_step) = test_stage
-        .steps
-        .iter()
-        .find(|(_, step)| !step.success)
-        .expect("the failing step must be recorded");
-    assert_ne!(
-        failing_step.exit_code, 0,
-        "failing step needs a non-zero exit code"
-    );
-
-    assert!(
-        !stage_names(&result).contains(&"package"),
-        "a stage depending on a failed stage must not run; stages were {:?}",
-        stage_names(&result)
-    );
+    assert_pipeline_failed_at(&result, "test", "package");
 }
 
 #[test]
@@ -295,8 +163,16 @@ stages:
     parallel: true
     steps:
 {}{}"#,
-        container_step("sleep-a", "python -c \"import time; time.sleep(4)\""),
-        container_step("sleep-b", "python -c \"import time; time.sleep(4)\""),
+        container_step(
+            "sleep-a",
+            PY_IMAGE,
+            "python -c \"import time; time.sleep(4)\""
+        ),
+        container_step(
+            "sleep-b",
+            PY_IMAGE,
+            "python -c \"import time; time.sleep(4)\""
+        ),
     );
 
     let result = run_pipeline(&yaml, workspace.path());
@@ -330,6 +206,7 @@ stages:
 {}"#,
         container_step(
             "read-workspace",
+            PY_IMAGE,
             "python -c \"assert open('/workspace/marker.txt').read() == 'mounted'\"",
         ),
     );
@@ -343,7 +220,7 @@ stages:
 
 // -------------------------------------------------------------- canary tier --
 
-/// Non-blocking: installs a real dependency from PyPI over the network.
+/// Non-blocking: installs real dependencies from PyPI over the network.
 ///
 /// This is the shape a pinned third-party repository would take. It is
 /// `#[ignore]` on purpose — an outage at PyPI, or upstream breaking their own
@@ -387,18 +264,16 @@ stages:
         // which is why the install targets it explicitly.
         container_step(
             "pip-install",
+            PY_IMAGE,
             "pip install --quiet --root-user-action=ignore --target /workspace/.pydeps pytest hypothesis",
         ),
         container_step(
             "property-tests",
+            PY_IMAGE,
             "PYTHONPATH=/workspace/.pydeps python /workspace/.pydeps/bin/pytest tests -q",
         ),
     );
 
     let result = run_pipeline(&yaml, workspace.path());
-    assert!(
-        result.success,
-        "canary pipeline failed: {:?}",
-        stage_names(&result)
-    );
+    assert_pipeline_passed(&result, &["install", "test"]);
 }
