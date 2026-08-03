@@ -92,15 +92,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let mut agent = BuildAgent::new(config, event_bus, repository);
 
-    // `start` registers the agent and spawns its heartbeat, then returns — it
-    // does not block, and it does not yet consume jobs (see #53). So the
-    // process has to park until it is asked to stop; otherwise it would
-    // register, exit immediately, and take its heartbeat with it.
+    // `start` registers and spawns the heartbeat, then returns; the job loop
+    // is what keeps the process alive and doing work.
     agent.start().await?;
-    info!("Agent registered and sending heartbeats; waiting for shutdown");
+    let shutdown_rx = agent.shutdown_receiver();
 
-    shutdown_signal().await;
-    info!("Shutting down");
+    tokio::select! {
+        result = agent.run_jobs(shutdown_rx) => {
+            if let Err(e) = result {
+                warn!(error = %e, "Job loop stopped with an error");
+                return Err(e.into());
+            }
+        }
+        _ = shutdown_signal() => info!("Shutting down"),
+    }
 
     Ok(())
 }

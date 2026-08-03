@@ -1,0 +1,142 @@
+# Job Dispatch Schemas
+#
+# The contract between the scheduler and an agent. A job is one stage of one
+# run, assigned to one agent.
+#
+# Every payload here carries the reasoning behind the decision, not only its
+# outcome: which labels matched, how long the job waited, why an agent refused.
+# An operator watching this channel should be able to answer "why did this run
+# sit for four minutes?" from the events alone, without reading scheduler logs.
+
+JobDispatchedPayload:
+  type: object
+  description: The scheduler has assigned a stage to a specific agent.
+  required:
+    - job_id
+    - run_id
+    - pipeline_id
+    - pipeline_name
+    - stage_name
+    - agent_id
+    - agent_name
+    - steps
+    - attempt
+    - queued_at
+    - dispatched_at
+  properties:
+    job_id:
+      $ref: './common.yaml#/Uuid'
+      description: Identifies this dispatch attempt, not the stage.
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_id:
+      $ref: './common.yaml#/Uuid'
+    pipeline_name:
+      type: string
+      description: Carried so consumers need not resolve the pipeline to log usefully.
+    stage_name:
+      type: string
+    job_index:
+      type: integer
+      description: Index within a matrix expansion, absent for a plain stage.
+    agent_id:
+      $ref: './common.yaml#/Uuid'
+    agent_name:
+      type: string
+    matched_labels:
+      type: array
+      description: >-
+        The labels the job required that this agent satisfied. This is why this
+        agent was chosen, and it is the first thing anyone asks when a job lands
+        somewhere surprising.
+      items:
+        type: string
+    steps:
+      type: array
+      description: The steps to run, in order, resolved from the pipeline definition.
+      items:
+        $ref: './pipeline.yaml#/StepDefinition'
+    variables:
+      type: object
+      description: Variables resolved for this stage. Secrets are never included.
+      additionalProperties:
+        type: string
+    attempt:
+      type: integer
+      minimum: 1
+      description: 1 on first dispatch, incremented on redispatch after failure.
+    queue_wait_ms:
+      type: integer
+      description: >-
+        How long the job waited between being queued and being dispatched.
+        Present so queue latency is observable without correlating timestamps
+        across two events.
+    timeout_minutes:
+      type: integer
+    queued_at:
+      $ref: './common.yaml#/Timestamp'
+    dispatched_at:
+      $ref: './common.yaml#/Timestamp'
+
+JobAcceptedPayload:
+  type: object
+  description: An agent has taken the job and will run it.
+  required:
+    - job_id
+    - run_id
+    - agent_id
+    - accepted_at
+  properties:
+    job_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    agent_id:
+      $ref: './common.yaml#/Uuid'
+    workspace:
+      type: string
+      description: Where the agent will run the job, for anyone debugging it later.
+    accepted_at:
+      $ref: './common.yaml#/Timestamp'
+
+JobRejectedPayload:
+  type: object
+  description: >-
+    An agent has declined the job. The scheduler must redispatch it; without
+    this event the job would sit assigned to an agent that is not running it.
+  required:
+    - job_id
+    - run_id
+    - agent_id
+    - reason
+    - rejected_at
+  properties:
+    job_id:
+      $ref: './common.yaml#/Uuid'
+    run_id:
+      $ref: './common.yaml#/Uuid'
+    agent_id:
+      $ref: './common.yaml#/Uuid'
+    reason:
+      $ref: '#/JobRejectionReason'
+    detail:
+      type: string
+      description: Human-readable specifics, e.g. which capability was missing.
+    retryable:
+      type: boolean
+      description: >-
+        Whether redispatching to another agent could succeed. Capacity problems
+        are retryable; a job requiring a capability no agent has is not, and
+        retrying it forever hides the real problem.
+    rejected_at:
+      $ref: './common.yaml#/Timestamp'
+
+JobRejectionReason:
+  type: string
+  description: Why an agent declined a job. Typed so it can be acted on, not just read.
+  enum:
+    - at_capacity
+    - missing_capability
+    - draining
+    - workspace_unavailable
+    - unknown_job

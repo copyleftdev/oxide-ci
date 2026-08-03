@@ -179,3 +179,13 @@ Span:
   $ref: './trace.yaml#/Span'
 TracingConfig:
   $ref: './trace.yaml#/TracingConfig'
+
+# Job Dispatch
+JobDispatchedPayload:
+  $ref: './job.yaml#/JobDispatchedPayload'
+JobAcceptedPayload:
+  $ref: './job.yaml#/JobAcceptedPayload'
+JobRejectedPayload:
+  $ref: './job.yaml#/JobRejectedPayload'
+JobRejectionReason:
+  $ref: './job.yaml#/JobRejectionReason'

@@ -1,0 +1,22 @@
+# Job Dispatch Messages
+
+JobDispatched:
+  name: JobDispatched
+  title: Job Dispatched Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/job.yaml#/JobDispatchedPayload'
+
+JobAccepted:
+  name: JobAccepted
+  title: Job Accepted Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/job.yaml#/JobAcceptedPayload'
+
+JobRejected:
+  name: JobRejected
+  title: Job Rejected Event
+  contentType: application/json
+  payload:
+    $ref: '../schemas/job.yaml#/JobRejectedPayload'

@@ -5,6 +5,10 @@ edition = "2024"
 license.workspace = true
 description = "Pipeline scheduling and orchestration for Oxide CI"
 
+[[bin]]
+name = "oxide-scheduler"
+path = "src/main.rs"
+
 [dependencies]
 oxide-core = { workspace = true }
 oxide-nats = { workspace = true }
@@ -12,8 +16,10 @@ oxide-db = { workspace = true }
 oxide-licensing = { workspace = true }
 
 tokio = { workspace = true }
+futures = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }

@@ -3540,6 +3540,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "futures",
  "hostname",
  "oxide-cache",
  "oxide-core",
@@ -3798,6 +3799,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "cron",
+ "futures",
  "oxide-core",
  "oxide-db",
  "oxide-licensing",
@@ -3809,6 +3811,7 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

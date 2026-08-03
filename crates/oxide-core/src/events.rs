@@ -3,7 +3,7 @@
 use crate::agent::{AgentStatus, DisconnectReason, SystemMetrics};
 use crate::cache::CacheEvictionReason;
 use crate::ids::*;
-use crate::pipeline::TriggerType;
+use crate::pipeline::{StepDefinition, TriggerType};
 use crate::run::{CancelReasonType, LogStream, RunStatus, StageStatus, StepStatus};
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
@@ -28,6 +28,11 @@ pub enum Event {
     StepStarted(StepStartedPayload),
     StepOutput(StepOutputPayload),
     StepCompleted(StepCompletedPayload),
+
+    // Job dispatch (scheduler <-> agent)
+    JobDispatched(JobDispatchedPayload),
+    JobAccepted(JobAcceptedPayload),
+    JobRejected(JobRejectedPayload),
 
     // Agent
     AgentRegistered(AgentRegisteredPayload),
@@ -86,6 +91,9 @@ impl Event {
             Event::StepStarted(p) => format!("run.{}.step.{}.started", p.run_id, p.step_id),
             Event::StepOutput(p) => format!("run.{}.step.{}.output", p.run_id, p.step_id),
             Event::StepCompleted(p) => format!("run.{}.step.{}.completed", p.run_id, p.step_id),
+            Event::JobDispatched(p) => format!("agent.{}.job.dispatched", p.agent_id),
+            Event::JobAccepted(p) => format!("run.{}.job.accepted", p.run_id),
+            Event::JobRejected(p) => format!("run.{}.job.rejected", p.run_id),
             Event::AgentRegistered(_) => "agent.registered".to_string(),
             Event::AgentHeartbeat(p) => format!("agent.{}.heartbeat", p.agent_id),
             Event::AgentDisconnected(p) => format!("agent.{}.disconnected", p.agent_id),
@@ -556,4 +564,190 @@ pub struct PaymentFailedPayload {
     pub next_retry_at: Option<DateTime<Utc>>,
     pub keygen_license_id: Option<String>,
     pub failed_at: DateTime<Utc>,
+}
+
+// ---------------------------------------------------------- job dispatch --
+
+/// The scheduler has assigned a stage to a specific agent.
+///
+/// Carries why the decision was made, not only what it was: which labels
+/// matched, how long the job waited, which attempt this is. An operator should
+/// be able to explain a slow or surprising placement from this event alone.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct JobDispatchedPayload {
+    /// Identifies this dispatch attempt, not the stage.
+    pub job_id: JobId,
+    pub run_id: RunId,
+    pub pipeline_id: PipelineId,
+    /// Carried so consumers need not resolve the pipeline to log usefully.
+    pub pipeline_name: String,
+    pub stage_name: String,
+    /// Index within a matrix expansion; `None` for a plain stage.
+    pub job_index: Option<u32>,
+    pub agent_id: AgentId,
+    pub agent_name: String,
+    /// The labels this agent satisfied — why it was chosen.
+    pub matched_labels: Vec<String>,
+    pub steps: Vec<StepDefinition>,
+    /// Resolved variables. Secrets are never included.
+    pub variables: HashMap<String, String>,
+    /// 1 on first dispatch, incremented on redispatch after failure.
+    pub attempt: u32,
+    /// Queue latency, so it is observable without correlating two events.
+    pub queue_wait_ms: u64,
+    pub timeout_minutes: Option<u32>,
+    pub queued_at: DateTime<Utc>,
+    pub dispatched_at: DateTime<Utc>,
+}
+
+/// An agent has taken the job and will run it.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct JobAcceptedPayload {
+    pub job_id: JobId,
+    pub run_id: RunId,
+    pub agent_id: AgentId,
+    /// Where the agent will run it, for anyone debugging afterwards.
+    pub workspace: Option<String>,
+    pub accepted_at: DateTime<Utc>,
+}
+
+/// An agent has declined the job; the scheduler must redispatch it.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct JobRejectedPayload {
+    pub job_id: JobId,
+    pub run_id: RunId,
+    pub agent_id: AgentId,
+    pub reason: JobRejectionReason,
+    /// Specifics, such as which capability was missing.
+    pub detail: Option<String>,
+    /// Whether another agent could succeed. Retrying a job no agent can ever
+    /// run just hides the real problem.
+    pub retryable: bool,
+    pub rejected_at: DateTime<Utc>,
+}
+
+/// Why an agent declined a job. Typed so it can be acted on, not just read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum JobRejectionReason {
+    AtCapacity,
+    MissingCapability,
+    Draining,
+    WorkspaceUnavailable,
+    UnknownJob,
+}
+
+#[cfg(test)]
+mod job_dispatch_tests {
+    use super::*;
+
+    /// The wire field names are the contract with `spec/schemas/job.yaml`.
+    /// A rename here is invisible to the compiler and breaks every consumer,
+    /// so the required fields are asserted by name.
+    #[test]
+    fn dispatch_payload_matches_the_schema_field_names() {
+        let payload = JobDispatchedPayload {
+            job_id: JobId::new(),
+            run_id: RunId::new(),
+            pipeline_id: PipelineId::new(),
+            pipeline_name: "demo".into(),
+            stage_name: "build".into(),
+            job_index: None,
+            agent_id: AgentId::new(),
+            agent_name: "worker-1".into(),
+            matched_labels: vec!["linux".into()],
+            steps: vec![],
+            variables: HashMap::new(),
+            attempt: 1,
+            queue_wait_ms: 203,
+            timeout_minutes: None,
+            queued_at: Utc::now(),
+            dispatched_at: Utc::now(),
+        };
+
+        let json = serde_json::to_value(&payload).expect("payload should serialize");
+        for field in [
+            "job_id",
+            "run_id",
+            "pipeline_id",
+            "pipeline_name",
+            "stage_name",
+            "agent_id",
+            "agent_name",
+            "matched_labels",
+            "steps",
+            "attempt",
+            "queue_wait_ms",
+            "queued_at",
+            "dispatched_at",
+        ] {
+            assert!(
+                json.get(field).is_some(),
+                "`{field}` is required by schemas/job.yaml but is missing from the wire format"
+            );
+        }
+    }
+
+    #[test]
+    fn rejection_reasons_use_the_spelling_the_schema_declares() {
+        let expected = [
+            (JobRejectionReason::AtCapacity, "at_capacity"),
+            (JobRejectionReason::MissingCapability, "missing_capability"),
+            (JobRejectionReason::Draining, "draining"),
+            (
+                JobRejectionReason::WorkspaceUnavailable,
+                "workspace_unavailable",
+            ),
+            (JobRejectionReason::UnknownJob, "unknown_job"),
+        ];
+        for (reason, wire) in expected {
+            assert_eq!(
+                serde_json::to_value(reason).unwrap(),
+                serde_json::Value::String(wire.to_string()),
+                "enum spelling must match the schema's enum list"
+            );
+        }
+    }
+
+    #[test]
+    fn subjects_match_the_channel_addresses() {
+        // spec/channels/job.yaml declares these addresses; if the code and the
+        // spec disagree, nothing is delivered and nothing errors.
+        let agent_id = AgentId::new();
+        let run_id = RunId::new();
+
+        let dispatched = Event::JobDispatched(JobDispatchedPayload {
+            job_id: JobId::new(),
+            run_id,
+            pipeline_id: PipelineId::new(),
+            pipeline_name: "demo".into(),
+            stage_name: "build".into(),
+            job_index: None,
+            agent_id,
+            agent_name: "worker-1".into(),
+            matched_labels: vec![],
+            steps: vec![],
+            variables: HashMap::new(),
+            attempt: 1,
+            queue_wait_ms: 0,
+            timeout_minutes: None,
+            queued_at: Utc::now(),
+            dispatched_at: Utc::now(),
+        });
+        assert_eq!(
+            dispatched.subject(),
+            format!("agent.{agent_id}.job.dispatched")
+        );
+
+        let rejected = Event::JobRejected(JobRejectedPayload {
+            job_id: JobId::new(),
+            run_id,
+            agent_id,
+            reason: JobRejectionReason::AtCapacity,
+            detail: None,
+            retryable: true,
+            rejected_at: Utc::now(),
+        });
+        assert_eq!(rejected.subject(), format!("run.{run_id}.job.rejected"));
+    }
 }

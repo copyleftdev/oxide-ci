@@ -262,6 +262,52 @@ impl Scheduler {
         vec![Capability::Docker] // Default to Docker
     }
 
+    /// Take responsibility for a run that already exists.
+    ///
+    /// `start_run` creates a run and announces it. This adopts one that another
+    /// process — the API, a webhook — already created and announced, which is
+    /// how a scheduler in its own process picks up work at all. It deliberately
+    /// publishes nothing: re-announcing a run it just heard about would feed
+    /// itself forever.
+    pub async fn adopt_run(
+        &self,
+        run_id: RunId,
+        pipeline_id: PipelineId,
+        definition: &PipelineDefinition,
+    ) -> Result<()> {
+        let dag = self
+            .dag_builder
+            .build(definition)
+            .map_err(|e| oxide_core::Error::Internal(e.to_string()))?;
+
+        {
+            let mut active = self.active_runs.write().await;
+            if active.contains_key(&run_id) {
+                return Ok(());
+            }
+            active.insert(
+                run_id,
+                RunState {
+                    pipeline_id,
+                    dag,
+                    completed_stages: vec![],
+                    failed_stages: vec![],
+                },
+            );
+        }
+
+        self.queue_ready_stages(run_id).await
+    }
+
+    /// Put a job back on the queue.
+    ///
+    /// Used when a dispatch could not be completed — the agent refused, or the
+    /// publish failed. Without this a rejected job is simply lost, and the run
+    /// hangs with no indication why.
+    pub async fn requeue(&self, job: QueuedJob) {
+        self.queue.write().await.enqueue(job);
+    }
+
     /// Mark a stage as completed.
     pub async fn stage_completed(
         &self,

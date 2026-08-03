@@ -19,6 +19,7 @@ oxide-secrets = { workspace = true }
 oxide-trace = { workspace = true }
 
 tokio = { workspace = true }
+futures = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

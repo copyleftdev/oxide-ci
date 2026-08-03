@@ -1,0 +1,38 @@
+# Job Dispatch Channels
+#
+# Dispatch is addressed to a specific agent, so an agent subscribes to its own
+# subject and receives only work meant for it. The replies are addressed by run
+# so the scheduler — and anything else watching a run — sees them without
+# subscribing per agent.
+
+dispatched:
+  address: agent.{agent_id}.job.dispatched
+  description: The scheduler assigns a stage to a named agent
+  parameters:
+    agent_id:
+      description: The agent the job is assigned to
+  messages:
+    jobDispatched:
+      $ref: '../messages/job.yaml#/JobDispatched'
+
+accepted:
+  address: run.{run_id}.job.accepted
+  description: The agent has taken the job and will run it
+  parameters:
+    run_id:
+      description: The run identifier
+  messages:
+    jobAccepted:
+      $ref: '../messages/job.yaml#/JobAccepted'
+
+rejected:
+  address: run.{run_id}.job.rejected
+  description: >-
+    The agent declined the job and it must be redispatched. Without this the
+    job would sit assigned to an agent that is not running it.
+  parameters:
+    run_id:
+      description: The run identifier
+  messages:
+    jobRejected:
+      $ref: '../messages/job.yaml#/JobRejected'

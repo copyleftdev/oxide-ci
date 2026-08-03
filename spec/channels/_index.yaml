@@ -104,3 +104,11 @@ notification/sent:
   $ref: './notification.yaml#/sent'
 notification/failed:
   $ref: './notification.yaml#/failed'
+
+# Job Dispatch
+agent/job/dispatched:
+  $ref: './job.yaml#/dispatched'
+run/job/accepted:
+  $ref: './job.yaml#/accepted'
+run/job/rejected:
+  $ref: './job.yaml#/rejected'

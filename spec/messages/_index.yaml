@@ -105,3 +105,11 @@ NotificationSent:
   $ref: './notification.yaml#/NotificationSent'
 NotificationFailed:
   $ref: './notification.yaml#/NotificationFailed'
+
+# Job Dispatch Messages
+JobDispatched:
+  $ref: './job.yaml#/JobDispatched'
+JobAccepted:
+  $ref: './job.yaml#/JobAccepted'
+JobRejected:
+  $ref: './job.yaml#/JobRejected'

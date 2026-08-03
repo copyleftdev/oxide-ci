@@ -3,14 +3,18 @@
 use crate::config::AgentConfig;
 use crate::executor::{Job, JobExecutor};
 use crate::heartbeat::HeartbeatService;
+use futures::StreamExt;
 use oxide_core::Result;
 use oxide_core::agent::{Agent, AgentStatus, DisconnectReason};
-use oxide_core::events::{AgentDisconnectedPayload, AgentRegisteredPayload, Event};
+use oxide_core::events::{
+    AgentDisconnectedPayload, AgentRegisteredPayload, Event, JobAcceptedPayload,
+    JobRejectedPayload, JobRejectionReason,
+};
 use oxide_core::ids::{AgentId, RunId};
 use oxide_core::ports::{AgentRepository, EventBus};
 use std::sync::Arc;
 use tokio::sync::{Semaphore, watch};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 /// The build agent.
 pub struct BuildAgent {
@@ -90,6 +94,172 @@ impl BuildAgent {
         info!(agent_id = %self.agent_id, "Agent started and ready for jobs");
 
         Ok(())
+    }
+
+    /// Take jobs addressed to this agent until told to stop.
+    ///
+    /// Every dispatch is answered — accepted or rejected with a typed reason.
+    /// Silence would leave the scheduler believing a job is running on an agent
+    /// that never took it, which is the failure mode this protocol exists to
+    /// prevent.
+    pub async fn run_jobs(&self, mut shutdown: watch::Receiver<bool>) -> Result<()> {
+        let subject = format!("agent.{}.job.dispatched", self.agent_id);
+        let mut stream = self.event_bus.subscribe(&subject).await?;
+        info!(agent_id = %self.agent_id, %subject, "Listening for dispatched jobs");
+
+        loop {
+            tokio::select! {
+                changed = shutdown.changed() => {
+                    if changed.is_err() || *shutdown.borrow() {
+                        info!("Job loop stopping");
+                        return Ok(());
+                    }
+                }
+                Some(event) = stream.next() => {
+                    match event {
+                        Ok(Event::JobDispatched(payload)) => self.handle_dispatch(payload).await,
+                        Ok(other) => debug!(subject = %other.subject(), "Ignoring unrelated event"),
+                        Err(e) => warn!(error = %e, "Dropped a malformed dispatch"),
+                    }
+                }
+            }
+        }
+    }
+
+    async fn handle_dispatch(&self, payload: oxide_core::events::JobDispatchedPayload) {
+        // Capacity is checked by taking the permit, not by reading a counter:
+        // reading first would let two dispatches both believe they fit.
+        let permit = match Arc::clone(&self.job_semaphore).try_acquire_owned() {
+            Ok(permit) => permit,
+            Err(_) => {
+                self.reject(
+                    &payload,
+                    JobRejectionReason::AtCapacity,
+                    Some(format!(
+                        "all {} job slots are in use",
+                        self.config.max_concurrent_jobs
+                    )),
+                )
+                .await;
+                return;
+            }
+        };
+
+        if *self.status_rx.borrow() == AgentStatus::Draining {
+            self.reject(&payload, JobRejectionReason::Draining, None)
+                .await;
+            return;
+        }
+
+        if let Err(e) = std::fs::create_dir_all(&self.config.workspace_dir) {
+            self.reject(
+                &payload,
+                JobRejectionReason::WorkspaceUnavailable,
+                Some(e.to_string()),
+            )
+            .await;
+            return;
+        }
+
+        info!(
+            job_id = %payload.job_id,
+            run_id = %payload.run_id,
+            stage = %payload.stage_name,
+            steps = payload.steps.len(),
+            queue_wait_ms = payload.queue_wait_ms,
+            "Accepted job"
+        );
+
+        let accepted = Event::JobAccepted(JobAcceptedPayload {
+            job_id: payload.job_id,
+            run_id: payload.run_id,
+            agent_id: self.agent_id,
+            workspace: Some(self.config.workspace_dir.display().to_string()),
+            accepted_at: chrono::Utc::now(),
+        });
+        if let Err(e) = self.event_bus.publish(accepted).await {
+            warn!(error = %e, "Could not publish acceptance");
+        }
+
+        let _ = self.status_tx.send(AgentStatus::Busy);
+        let _ = self.current_run_tx.send(Some(payload.run_id));
+
+        let job = Job {
+            run_id: payload.run_id,
+            pipeline_id: payload.pipeline_id,
+            pipeline_name: payload.pipeline_name.clone(),
+            stage: oxide_core::pipeline::StageDefinition {
+                name: payload.stage_name.clone(),
+                display_name: None,
+                depends_on: vec![],
+                condition: None,
+                environment: None,
+                variables: Default::default(),
+                steps: payload.steps.clone(),
+                parallel: false,
+                timeout_minutes: payload.timeout_minutes,
+                retry: None,
+                agent: None,
+                matrix: None,
+            },
+            stage_index: payload.job_index.unwrap_or(0),
+            variables: payload.variables.clone(),
+        };
+
+        match self.executor.execute(job).await {
+            Ok(result) => info!(
+                job_id = %payload.job_id,
+                success = result.success,
+                duration_ms = result.duration_ms,
+                "Job finished"
+            ),
+            Err(e) => error!(job_id = %payload.job_id, error = %e, "Job execution failed"),
+        }
+
+        let _ = self.current_run_tx.send(None);
+        let _ = self.status_tx.send(AgentStatus::Idle);
+        drop(permit);
+    }
+
+    /// Decline a job, saying why in a form the scheduler can act on.
+    async fn reject(
+        &self,
+        payload: &oxide_core::events::JobDispatchedPayload,
+        reason: JobRejectionReason,
+        detail: Option<String>,
+    ) {
+        // Capacity and draining pass; a missing capability will fail on every
+        // agent, so retrying it would only hide the real problem.
+        let retryable = !matches!(
+            reason,
+            JobRejectionReason::MissingCapability | JobRejectionReason::UnknownJob
+        );
+
+        warn!(
+            job_id = %payload.job_id,
+            ?reason,
+            retryable,
+            detail = detail.as_deref().unwrap_or(""),
+            "Rejecting job"
+        );
+
+        let event = Event::JobRejected(JobRejectedPayload {
+            job_id: payload.job_id,
+            run_id: payload.run_id,
+            agent_id: self.agent_id,
+            reason,
+            detail,
+            retryable,
+            rejected_at: chrono::Utc::now(),
+        });
+        if let Err(e) = self.event_bus.publish(event).await {
+            error!(error = %e, "Could not publish rejection; the scheduler will not requeue");
+        }
+    }
+
+    /// A receiver that flips when the agent is asked to stop.
+    pub fn shutdown_receiver(&self) -> watch::Receiver<bool> {
+        self.shutdown_rx.clone()
     }
 
     /// Register the agent with the scheduler.
