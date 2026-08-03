@@ -39,9 +39,9 @@ if [[ "$cmd" =~ git[[:space:]]+push ]] && [[ "$cmd" =~ (--force([[:space:]]|$)|[
   deny "Force push blocked. Use --force-with-lease and only after confirming with the user."
 fi
 
-# Proprietary license, not published to crates.io.
+# Not published to crates.io — installed from source (see README).
 if [[ "$cmd" =~ cargo[[:space:]]+publish ]]; then
-  deny "Oxide CI is proprietary and installed from source; cargo publish is not part of this project's workflow."
+  deny "Oxide CI is installed from source and is not on crates.io; publishing is a release decision, not a routine command. Ask the maintainer first."
 fi
 
 # Recursive deletes anywhere near the repo or home.

@@ -10,8 +10,8 @@ info:
     This product uses Keygen for license management and Stripe for payments.
     All API access requires a valid license key.
   license:
-    name: Proprietary
-    url: https://oxideci.io/license
+    name: MIT
+    url: https://github.com/copyleftdev/oxide-ci/blob/main/LICENSE
   contact:
     name: Oxide CI
     url: https://oxideci.io

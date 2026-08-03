@@ -25,7 +25,7 @@ members = [
 version = "0.1.0"
 edition = "2024"
 authors = ["Oxide CI <hello@oxideci.io>"]
-license = "Proprietary"
+license = "MIT"
 repository = "https://github.com/copyleftdev/oxide-ci"
 
 [workspace.dependencies]
