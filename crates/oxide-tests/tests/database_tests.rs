@@ -168,3 +168,104 @@ async fn test_concurrent_writes() {
     let all = repo.list(20, 0).await.unwrap();
     assert_eq!(all.len(), 10);
 }
+
+#[tokio::test]
+async fn test_run_stages_round_trip() {
+    let ctx = TestContext::postgres_only()
+        .await
+        .expect("Failed to create context");
+
+    let pipeline_repo = PgPipelineRepository::new(ctx.db.pool().clone());
+    let run_repo = PgRunRepository::new(ctx.db.pool().clone());
+
+    let fixture = PipelineFixture::multi_stage();
+    let pipeline = pipeline_repo
+        .create(&fixture.definition)
+        .await
+        .expect("Failed to create pipeline");
+
+    let run = RunFixture::queued(&pipeline);
+    let expected: Vec<String> = run.stages.iter().map(|s| s.name.clone()).collect();
+    let expected_steps: Vec<usize> = run.stages.iter().map(|s| s.steps.len()).collect();
+    run_repo.create(&run).await.expect("Failed to create run");
+
+    let found = run_repo.get(run.id).await.unwrap().unwrap();
+
+    // Order is part of the contract: stages are a sequence, not a set.
+    let names: Vec<String> = found.stages.iter().map(|s| s.name.clone()).collect();
+    assert_eq!(
+        names, expected,
+        "stages must read back in the order written"
+    );
+
+    let steps: Vec<usize> = found.stages.iter().map(|s| s.steps.len()).collect();
+    assert_eq!(steps, expected_steps, "each stage must keep its own steps");
+
+    for (before, after) in run.stages.iter().zip(found.stages.iter()) {
+        assert_eq!(after.id, before.id);
+        assert_eq!(after.status, before.status);
+        for (b, a) in before.steps.iter().zip(after.steps.iter()) {
+            assert_eq!(a.id, b.id);
+            assert_eq!(a.name, b.name);
+            assert_eq!(a.plugin, b.plugin);
+            assert_eq!(a.status, b.status);
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_stage_and_step_progress_persists() {
+    let ctx = TestContext::postgres_only()
+        .await
+        .expect("Failed to create context");
+
+    let pipeline_repo = PgPipelineRepository::new(ctx.db.pool().clone());
+    let run_repo = PgRunRepository::new(ctx.db.pool().clone());
+
+    let fixture = PipelineFixture::multi_stage();
+    let pipeline = pipeline_repo.create(&fixture.definition).await.unwrap();
+
+    let mut run = RunFixture::queued(&pipeline);
+    run_repo.create(&run).await.expect("Failed to create run");
+
+    // A run's stages change as it progresses; persisting only the initial
+    // shape would be nearly as useless as persisting nothing.
+    let started = chrono::Utc::now();
+    run.stages[0].status = oxide_core::run::StageStatus::Success;
+    run.stages[0].started_at = Some(started);
+    run.stages[0].duration_ms = Some(1234);
+    run.stages[0].steps[0].status = oxide_core::run::StepStatus::Success;
+    run.stages[0].steps[0].exit_code = Some(0);
+    run.stages[0].steps[0]
+        .outputs
+        .insert("artifact".to_string(), "app.tar.gz".to_string());
+    run.stages[1].status = oxide_core::run::StageStatus::Running;
+
+    run_repo.update(&run).await.expect("Failed to update run");
+
+    let found = run_repo.get(run.id).await.unwrap().unwrap();
+    assert_eq!(
+        found.stages.len(),
+        run.stages.len(),
+        "update must not drop stages"
+    );
+    assert_eq!(
+        found.stages[0].status,
+        oxide_core::run::StageStatus::Success
+    );
+    assert_eq!(found.stages[0].duration_ms, Some(1234));
+    assert!(found.stages[0].started_at.is_some());
+    assert_eq!(
+        found.stages[1].status,
+        oxide_core::run::StageStatus::Running
+    );
+
+    let step = &found.stages[0].steps[0];
+    assert_eq!(step.status, oxide_core::run::StepStatus::Success);
+    assert_eq!(step.exit_code, Some(0));
+    assert_eq!(
+        step.outputs.get("artifact").map(String::as_str),
+        Some("app.tar.gz"),
+        "step outputs must survive the round trip"
+    );
+}

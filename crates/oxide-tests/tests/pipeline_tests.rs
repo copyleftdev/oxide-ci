@@ -64,9 +64,6 @@ async fn test_pipeline_creation_and_run_queuing() {
 }
 
 #[tokio::test]
-#[ignore = "blocked on #52: PgRunRepository does not persist run stages, so a \
-run created with three stages reads back with none. The assertion is correct \
-and stays as written — it becomes the acceptance test when #52 lands."]
 async fn test_multi_stage_pipeline_run() {
     let ctx = TestContext::new().await.expect("Failed to create context");
 
