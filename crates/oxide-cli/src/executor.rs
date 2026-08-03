@@ -15,7 +15,7 @@ use oxide_core::pipeline::{
 use oxide_runner::{ContainerRunner, OutputLine, RunnerConfig, StepContext, StepRunner};
 // use regex::Regex; // Removed as it's now internal to oxide-core
 use oxide_core::interpolation::InterpolationContext;
-use oxide_plugins::{get_builtin_plugin, manifest::PluginCallInput};
+use oxide_plugins::manifest::PluginCallInput;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -648,7 +648,38 @@ async fn execute_step_attempt(
             );
         }
 
-        if let Some(plugin) = get_builtin_plugin(plugin_name) {
+        // A version the engine does not have is a different failure from a name
+        // it has never heard of, and gets a different message.
+        let resolution = match oxide_plugins::resolve_builtin(plugin_name) {
+            Ok(resolved) => Some(resolved),
+            Err(oxide_core::Error::PluginVersionMismatch {
+                name,
+                requested,
+                available,
+            }) => {
+                println!(
+                    "      {} Plugin version not available: {}",
+                    style("✗").red(),
+                    plugin_name
+                );
+                println!(
+                    "      ({name} is installed at {available}; `@{requested}` does not match it. Try {name}@v{}.)",
+                    available.split('.').next().unwrap_or("1")
+                );
+                return Ok(StepResult {
+                    success: false,
+                    exit_code: 1,
+                    duration_ms: 0,
+                });
+            }
+            Err(_) => None,
+        };
+
+        if let Some(resolved) = resolution {
+            if let Some(warning) = &resolved.warning {
+                println!("      {} {}", style("⚠").yellow(), warning);
+            }
+            let plugin = resolved.plugin;
             let start_plugin = std::time::Instant::now();
 
             // Prepare inputs
@@ -736,7 +767,8 @@ async fn execute_step_attempt(
                 plugin_name
             );
             println!(
-                "      (Only built-in plugins git-checkout, cache, docker-build are currently supported)"
+                "      (Built-in plugins: {}. Run `oxide plugins list` for details; registry plugins are not implemented yet.)",
+                oxide_plugins::builtin_summary()
             );
             return Ok(StepResult {
                 success: false,

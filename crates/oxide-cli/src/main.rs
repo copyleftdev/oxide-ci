@@ -23,7 +23,9 @@ mod parallel_tests;
 #[cfg(test)]
 mod retry_tests;
 
-use commands::{AgentCommands, CacheCommands, Commands, ConfigCommands, SecretCommands};
+use commands::{
+    AgentCommands, CacheCommands, Commands, ConfigCommands, PluginCommands, SecretCommands,
+};
 use config::CliConfig;
 
 #[derive(Parser)]
@@ -61,6 +63,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             SecretCommands::Set { name } => handlers::set_secret(&config, &name).await?,
             SecretCommands::List => handlers::list_secrets(&config).await?,
             SecretCommands::Delete { name } => handlers::delete_secret(&config, &name).await?,
+        },
+        Commands::Plugins { command } => match command {
+            PluginCommands::List => handlers::list_plugins()?,
         },
         Commands::Cache { command } => match command {
             CacheCommands::List => handlers::list_cache(&config).await?,

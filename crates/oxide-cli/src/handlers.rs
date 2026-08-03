@@ -366,3 +366,33 @@ pub fn set_config(key: &str, value: &str) -> Result<(), Box<dyn std::error::Erro
     println!("{} Set {} = {}", style("✓").green(), key, value);
     Ok(())
 }
+
+/// List built-in plugins and the versions they are installed at.
+pub fn list_plugins() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    println!("{}", style("Built-in plugins").bold());
+    println!();
+
+    for builtin in oxide_plugins::BUILTINS {
+        let version = match builtin.version() {
+            Ok(version) => version.to_string(),
+            Err(e) => {
+                println!("{} {}: {}", style("✗").red(), builtin.name, e);
+                continue;
+            }
+        };
+        println!("  {:<16} {}", style(builtin.name).cyan(), version);
+        if !builtin.aliases.is_empty() {
+            println!("  {:<16} also: {}", "", builtin.aliases.join(", "));
+        }
+    }
+
+    println!();
+    println!("Reference a plugin as `uses: name@version`:");
+    println!("  name          latest installed version");
+    println!("  name@v1       any 1.x");
+    println!("  name@v1.2     any 1.2.x");
+    println!("  name@v1.2.3   exactly 1.2.3");
+    println!();
+    println!("Registry plugins are not implemented yet — only the plugins above resolve.");
+    Ok(())
+}

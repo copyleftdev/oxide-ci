@@ -64,6 +64,12 @@ pub enum Commands {
         command: SecretCommands,
     },
 
+    /// Inspect available plugins
+    Plugins {
+        #[command(subcommand)]
+        command: PluginCommands,
+    },
+
     /// Manage cache
     Cache {
         #[command(subcommand)]
@@ -108,6 +114,12 @@ pub enum SecretCommands {
         /// Secret name
         name: String,
     },
+}
+
+#[derive(Subcommand)]
+pub enum PluginCommands {
+    /// List built-in plugins and the versions they are installed at
+    List,
 }
 
 #[derive(Subcommand)]

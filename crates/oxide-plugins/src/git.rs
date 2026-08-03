@@ -22,6 +22,10 @@ impl Plugin for GitCheckoutPlugin {
         "git-checkout"
     }
 
+    fn version(&self) -> &str {
+        "1.0.0"
+    }
+
     fn execute(&self, input: &PluginCallInput) -> Result<PluginCallOutput> {
         let repo = input
             .params

@@ -22,6 +22,10 @@ impl Plugin for RustToolchainPlugin {
         "rust-toolchain"
     }
 
+    fn version(&self) -> &str {
+        "1.0.0"
+    }
+
     fn execute(&self, input: &PluginCallInput) -> Result<PluginCallOutput> {
         // Parse inputs
         let toolchain = input

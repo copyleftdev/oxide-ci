@@ -40,5 +40,12 @@ oxide cache clean
 oxide cache stats
 ```
 
+### `oxide plugins`
+Inspect the plugins this binary ships with, and the versions `uses:` can ask for.
+
+```bash
+oxide plugins list
+```
+
 ### `oxide init`
 Initialize a new pipeline configuration in the current directory.

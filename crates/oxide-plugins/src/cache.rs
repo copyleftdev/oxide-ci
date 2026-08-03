@@ -25,6 +25,10 @@ impl Plugin for CachePlugin {
         "cache"
     }
 
+    fn version(&self) -> &str {
+        "1.0.0"
+    }
+
     fn execute(&self, input: &PluginCallInput) -> Result<PluginCallOutput> {
         let key = input
             .params

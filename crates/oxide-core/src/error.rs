@@ -48,6 +48,13 @@ pub enum Error {
     #[error("Plugin not found: {0}")]
     PluginNotFound(String),
 
+    #[error("Plugin {name} has no version matching `{requested}` (available: {available})")]
+    PluginVersionMismatch {
+        name: String,
+        requested: String,
+        available: String,
+    },
+
     #[error("Plugin execution failed: {0}")]
     PluginExecutionFailed(String),
 
