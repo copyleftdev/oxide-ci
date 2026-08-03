@@ -373,7 +373,8 @@ impl CacheProvider for FilesystemProvider {
             }
         }
 
-        entries.sort_by(|a, b| b.created_at.cmp(&a.created_at)); // Now we have created_at if meta exists!
+        // Newest first.
+        entries.sort_by_key(|entry| std::cmp::Reverse(entry.created_at));
 
         Ok(entries)
     }
