@@ -1,6 +1,9 @@
 # Oxide CI — Rust Architecture
 
 > Technical specification for the Oxide CI engine implementation.
+>
+> Diagrams of the same material live in [docs/src/diagrams.md](docs/src/diagrams.md),
+> and the test strategy in [docs/src/testing.md](docs/src/testing.md).
 
 ## Overview
 

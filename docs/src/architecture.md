@@ -2,6 +2,10 @@
 
 ![Architecture](media/architecture.png)
 
+For the crate topology, execution flow, plugin resolution, and secret handling as
+diagrams, see [System Diagrams](diagrams.md). For how the tiers of the test suite
+fit together, see [Testing Strategy](testing.md).
+
 Oxide CI is composed of several modular crates.
 
 ## Core Components
