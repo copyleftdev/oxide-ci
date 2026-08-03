@@ -2,6 +2,7 @@
 name = "oxide-cache"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Distributed cache for Oxide CI"
 
 [dependencies]

@@ -2,6 +2,7 @@
 name = "oxide-secrets"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Multi-provider secret management for Oxide CI"
 
 [dependencies]

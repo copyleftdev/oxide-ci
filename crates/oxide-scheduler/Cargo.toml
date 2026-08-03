@@ -2,6 +2,7 @@
 name = "oxide-scheduler"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Pipeline scheduling and orchestration for Oxide CI"
 
 [dependencies]

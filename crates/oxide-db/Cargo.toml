@@ -2,6 +2,7 @@
 name = "oxide-db"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "PostgreSQL database layer for Oxide CI"
 
 [dependencies]

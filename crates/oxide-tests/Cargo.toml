@@ -2,6 +2,7 @@
 name = "oxide-tests"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Integration test infrastructure for Oxide CI"
 publish = false
 

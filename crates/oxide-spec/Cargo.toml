@@ -2,6 +2,7 @@
 name = "oxide-spec"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Spec-code correlation and validation for Oxide CI"
 build = "build.rs"
 

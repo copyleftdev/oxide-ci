@@ -2,6 +2,7 @@
 name = "oxide-nats"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "NATS event bus implementation for Oxide CI"
 
 [features]

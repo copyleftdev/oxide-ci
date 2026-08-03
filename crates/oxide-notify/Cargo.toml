@@ -2,6 +2,7 @@
 name = "oxide-notify"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Notification channels for Oxide CI"
 
 [dependencies]

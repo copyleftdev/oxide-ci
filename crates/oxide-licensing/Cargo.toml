@@ -2,6 +2,7 @@
 name = "oxide-licensing"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Keygen license validation for Oxide CI"
 
 [dependencies]

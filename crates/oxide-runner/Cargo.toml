@@ -2,6 +2,7 @@
 name = "oxide-runner"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Step execution engine for Oxide CI"
 
 [dependencies]

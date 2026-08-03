@@ -2,6 +2,7 @@
 name = "oxide-auth"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "OIDC token exchange for Oxide CI"
 
 [dependencies]

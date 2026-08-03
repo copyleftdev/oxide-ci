@@ -2,6 +2,7 @@
 name = "oxide-billing"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Stripe billing integration for Oxide CI"
 
 [dependencies]

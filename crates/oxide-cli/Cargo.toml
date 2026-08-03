@@ -2,6 +2,7 @@
 name = "oxide-cli"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "Command-line interface for Oxide CI"
 
 [[bin]]

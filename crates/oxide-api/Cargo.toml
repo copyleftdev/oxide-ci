@@ -2,6 +2,7 @@
 name = "oxide-api"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "HTTP/WebSocket API server for Oxide CI"
 
 [dependencies]

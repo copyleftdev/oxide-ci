@@ -2,6 +2,7 @@
 name = "oxide-trace"
 version.workspace = true
 edition = "2024"
+license.workspace = true
 description = "OpenTelemetry integration for Oxide CI"
 
 [dependencies]
