@@ -20,6 +20,8 @@ mod examples_tests;
 #[cfg(all(test, feature = "e2e"))]
 mod e2e_python_tests;
 #[cfg(all(test, feature = "e2e"))]
+mod e2e_registry_tests;
+#[cfg(all(test, feature = "e2e"))]
 mod e2e_rust_tests;
 #[cfg(all(test, feature = "e2e"))]
 mod e2e_support;

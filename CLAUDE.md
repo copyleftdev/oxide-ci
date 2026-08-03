@@ -79,7 +79,7 @@ Branch `feat/issue-N-slug` or `fix/issue-N-slug` from latest `main`; merge strai
 - `Cargo.lock` is gitignored; don't hand-edit it or commit it.
 - No `target/` cache checked in — the first `cargo build` of a session is multi-minute. Prefer `cargo check -p <crate>` while iterating and run the full gate once.
 - Integration tests need a running Docker daemon; they're behind the `integration` feature and skipped by default.
-- E2E tests (`crates/oxide-cli/src/e2e_{python,rust,typescript}_tests.rs` on `e2e_support.rs`, feature `e2e`) run real pipelines in containers across three ecosystems. Two tiers: hermetic tests are safe to gate on; canary tests hit live package registries and are `#[ignore]` so upstream outages can never turn the gate red.
+- E2E tests (`crates/oxide-cli/src/e2e_{python,rust,typescript,registry}_tests.rs` on `e2e_support.rs`, feature `e2e`) run real pipelines in containers across three ecosystems. Two tiers: hermetic tests are safe to gate on; canary tests hit live package registries and are `#[ignore]` so upstream outages can never turn the gate red.
 - `.venv/` + `requirements.txt` exist only for `scripts/*.py` (logo/diagram generation), not for the product.
 - `.windsurf/rules/` mirrors this file for Windsurf. This file is the source of truth; if you change a rule here that lives there too, update both.
 
