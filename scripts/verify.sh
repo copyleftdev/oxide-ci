@@ -63,6 +63,9 @@ fi
 
 step "cargo clippy -D warnings" cargo clippy --workspace --all-targets -- -D warnings
 step "cargo test --workspace --lib --bins" cargo test --workspace --lib --bins
+# Compile-check the e2e suite too. It is not run here (it needs Docker and
+# minutes), but it must keep building as the engine changes.
+step "cargo clippy --features e2e" cargo clippy -p oxide-cli --features e2e --all-targets -- -D warnings
 
 if [ "$SPEC" = 1 ]; then
   step "asyncapi validate" npx --yes asyncapi validate spec/asyncapi.yaml

@@ -16,6 +16,9 @@ mod artifact_tests;
 mod cache_tests;
 #[cfg(test)]
 mod examples_tests;
+
+#[cfg(all(test, feature = "e2e"))]
+mod e2e_python_tests;
 #[cfg(test)]
 mod executor_tests;
 #[cfg(test)]

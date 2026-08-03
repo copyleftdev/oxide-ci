@@ -18,6 +18,8 @@ Hexagonal architecture; NATS JetStream event bus; PostgreSQL/SQLx; Axum HTTP+WS;
 | Fast type check | `cargo check --workspace` |
 | Unit tests | `cargo test --workspace --lib` |
 | Integration tests (needs Docker) | `cargo test -p oxide-tests --features integration` |
+| End-to-end container tests (needs Docker) | `make e2e` |
+| E2E canary vs live registries (non-blocking) | `make e2e-canary` |
 | Lints | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Format | `cargo fmt --all` |
 | Validate AsyncAPI spec | `make lint` (`npx asyncapi validate spec/asyncapi.yaml`) |
@@ -77,6 +79,7 @@ Branch `feat/issue-N-slug` or `fix/issue-N-slug` from latest `main`; merge strai
 - `Cargo.lock` is gitignored; don't hand-edit it or commit it.
 - No `target/` cache checked in — the first `cargo build` of a session is multi-minute. Prefer `cargo check -p <crate>` while iterating and run the full gate once.
 - Integration tests need a running Docker daemon; they're behind the `integration` feature and skipped by default.
+- E2E tests (`crates/oxide-cli/src/e2e_python_tests.rs`, feature `e2e`) run real pipelines in containers. Two tiers: hermetic tests are safe to gate on; canary tests hit live package registries and are `#[ignore]` so upstream outages can never turn the gate red. The engine does **not** pull images — the harness pre-pulls; see `ensure_image`.
 - `.venv/` + `requirements.txt` exist only for `scripts/*.py` (logo/diagram generation), not for the product.
 - `.windsurf/rules/` mirrors this file for Windsurf. This file is the source of truth; if you change a rule here that lives there too, update both.
 

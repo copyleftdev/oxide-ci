@@ -1,6 +1,6 @@
 # Oxide CI - AsyncAPI Development Commands
 
-.PHONY: help lint validate bundle docs clean setup check fmt test verify
+.PHONY: help lint validate bundle docs clean setup check fmt test verify e2e e2e-canary
 
 help: ## Display this help message
 	@(which chafa >/dev/null && chafa docs/media/logo.png --size=40x20) || (.venv/bin/python scripts/generate_ascii_logo.py 2>/dev/null) || (python3 scripts/generate_ascii_logo.py 2>/dev/null) || echo "Oxide CI"
@@ -62,6 +62,12 @@ fmt:
 
 test:
 	cargo test --workspace --lib --bins
+
+e2e: ## Run end-to-end container tests (needs Docker, minutes)
+	cargo test -p oxide-cli --features e2e -- --test-threads=1
+
+e2e-canary: ## Run e2e canary tests against live package registries (non-blocking)
+	cargo test -p oxide-cli --features e2e -- --test-threads=1 --ignored
 
 test-integration:
 	cargo test -p oxide-tests --features integration

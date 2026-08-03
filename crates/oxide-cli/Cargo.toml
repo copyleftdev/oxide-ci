@@ -5,6 +5,11 @@ edition = "2024"
 license.workspace = true
 description = "Command-line interface for Oxide CI"
 
+[features]
+# End-to-end tests that drive real containers. Opt-in: they need a Docker
+# daemon and take minutes, so they gate merges rather than commits.
+e2e = []
+
 [[bin]]
 name = "oxide"
 path = "src/main.rs"
