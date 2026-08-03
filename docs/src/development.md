@@ -101,8 +101,15 @@ taken.
 never registered cannot be dispatched to. Then check the scheduler log for
 `Adopted run`; without it, the scheduler is not seeing `RunQueued`.
 
-**`docker compose build` is slow the first time.** It compiles the workspace
-in release mode. Subsequent builds reuse the layer unless `crates/` changed.
+**`docker compose build` is slow the first time.** It compiles ~600
+dependency crates in release mode, plus `cargo-chef` itself. That is the price
+once.
+
+After that, dependencies live in their own layer and are reused. Editing a
+crate rebuilds the workspace's own code, not the graph beneath it — the
+dependency layer is invalidated only by `Cargo.toml` or `Cargo.lock` changing,
+which is what actually changes the graph. If a build appears to recompile
+everything, check whether a manifest changed.
 
 ## See also
 
