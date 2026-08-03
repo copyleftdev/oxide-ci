@@ -100,6 +100,50 @@ A stage failure stops the loop: stages that depend on it never run, and the
 failed stage is recorded so the result says *what* failed rather than only
 *that* something did.
 
+## 2b. How a run travels the distributed system
+
+The path a run takes when the API, scheduler and agent are running as separate
+processes. Each hop is a different process, which is what makes a stall
+diagnosable: the trail simply stops at whichever service is not doing its part.
+
+```mermaid
+sequenceDiagram
+    actor dev as Developer
+    participant api as oxide-api
+    participant bus as NATS JetStream
+    participant sched as oxide-scheduler
+    participant agent as oxide-agent
+
+    dev->>api: POST /pipelines/{id}/runs
+    api->>api: create the run
+    api->>bus: RunQueued
+    api-->>dev: 201, status queued
+
+    bus->>sched: RunQueued
+    sched->>sched: adopt the run, build the DAG,<br/>queue stages with no dependencies
+    sched->>bus: JobDispatched<br/>agent.{agent_id}.job.dispatched<br/>matched_labels · queue_wait_ms · attempt
+    bus->>agent: JobDispatched
+
+    alt the agent has capacity
+        agent->>bus: JobAccepted
+        agent->>agent: run the steps
+        agent->>bus: StepStarted / StepCompleted / StageCompleted
+        bus->>sched: StageCompleted
+        sched->>sched: advance the DAG, queue what is now ready
+    else at capacity, draining, or missing a capability
+        agent->>bus: JobRejected<br/>typed reason · retryable
+        bus->>sched: JobRejected
+        sched->>sched: requeue if retryable,<br/>otherwise stop and say why
+    end
+```
+
+The scheduler **adopts** the run rather than creating it, and deliberately
+publishes nothing when it does — re-announcing a run it just heard about would
+feed itself forever.
+
+A run stuck in `queued` is almost always the second hop or the third: no
+scheduler running, or no agent whose labels match.
+
 ## 3. Resolving a `uses:` reference
 
 How `uses: docker-build@v1` becomes a plugin, and where each failure mode
