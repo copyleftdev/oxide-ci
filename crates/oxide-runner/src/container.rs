@@ -189,9 +189,32 @@ impl ContainerRunner {
                 })?
         };
 
-        let exit_code = wait_result
-            .map_err(|e| oxide_core::Error::Internal(format!("Container wait failed: {}", e)))?
-            .status_code as i32;
+        // A container that exits non-zero is a failed step, not a failed engine.
+        // Bollard surfaces that case as DockerContainerWaitError carrying the
+        // exit code, so unwrapping it with `?` would turn every failing test
+        // suite into an internal error — and skip the cleanup below, leaking
+        // the container.
+        let exit_code = match wait_result {
+            Ok(response) => response.status_code as i32,
+            Err(bollard::errors::Error::DockerContainerWaitError { code, .. }) => code as i32,
+            Err(e) => {
+                let remove_options = RemoveContainerOptions {
+                    force: true,
+                    ..Default::default()
+                };
+                if let Err(cleanup) = self
+                    .docker
+                    .remove_container(&container_name, Some(remove_options))
+                    .await
+                {
+                    warn!(container = %container_name, error = %cleanup, "Failed to remove container");
+                }
+                return Err(oxide_core::Error::Internal(format!(
+                    "Container wait failed: {}",
+                    e
+                )));
+            }
+        };
 
         // Cleanup container
         let remove_options = RemoveContainerOptions {

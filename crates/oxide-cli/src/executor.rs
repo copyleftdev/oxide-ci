@@ -254,6 +254,16 @@ pub async fn execute_pipeline(
                             }
                             Err(e) => {
                                 println!("Stage {} execution error: {}", name, e);
+                                // Record the stage even though it errored, so the
+                                // result says which stage died instead of coming
+                                // back with an empty stage list.
+                                stages_results.push((
+                                    name.clone(),
+                                    StageResult {
+                                        success: false,
+                                        steps: Vec::new(),
+                                    },
+                                ));
                                 all_success = false;
                                 break;
                             }
